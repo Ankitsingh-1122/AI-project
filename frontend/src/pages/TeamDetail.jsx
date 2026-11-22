@@ -4,6 +4,7 @@ import { api } from '../api.js'
 import { useAuth } from '../auth.jsx'
 import TeamMessages from '../components/TeamMessages.jsx'
 import { Badge, ErrorNote, Spinner } from '../components/ui.jsx'
+import { IconAward, IconEdit, IconHeart, IconInfo, IconSliders, IconTarget, IconUsers } from '../components/icons.jsx'
 
 function initials(name = '') {
   const parts = name.trim().split(/\s+/).filter(Boolean)
@@ -42,21 +43,21 @@ export default function TeamDetail() {
         {(isOwner || isAdmin) && (
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {isOwner && (
-              <Link to="/team" className="btn btn-primary btn-sm">✎ Edit team profile</Link>
+              <Link to="/team" className="btn btn-primary btn-sm"><IconEdit size={14} /> Edit team profile</Link>
             )}
             {isOwner && (
-              <Link to="/team/recommended" className="btn btn-outline btn-sm">🎯 View recommendations</Link>
+              <Link to="/team/recommended" className="btn btn-outline btn-sm"><IconTarget size={14} /> View recommendations</Link>
             )}
           </div>
         )}
       </div>
 
       <div className="card team-detail-hero">
-        <div className="team-detail-avatar" aria-hidden="true">👥</div>
+        <div className="team-detail-avatar" aria-hidden="true"><IconUsers size={34} /></div>
         <div style={{ flex: 1, minWidth: 240 }}>
           <p style={{ margin: '0 0 6px' }}>{team.description || 'No description yet.'}</p>
           {team.experience && (
-            <p className="muted small" style={{ margin: 0 }}>🏆 {team.experience}</p>
+            <p className="muted small" style={{ margin: 0 }}><IconAward size={14} /> {team.experience}</p>
           )}
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -86,7 +87,7 @@ export default function TeamDetail() {
             </div>
           )}
           <div className="profile-note" style={{ marginTop: 14 }}>
-            <span aria-hidden="true">ℹ️</span>
+            <span aria-hidden="true"><IconInfo size={16} /></span>
             <span>
               The team profile stores each member&apos;s name and role. Messaging with this
               team is shared — one conversation for everyone, in the thread below.
@@ -99,13 +100,13 @@ export default function TeamDetail() {
           <h4 style={{ marginTop: 4 }}>Skills</h4>
           <div className="kw-row">
             {team.skills.map((s) => (
-              <span className="kw" key={`s-${s}`}>⚙ {s}</span>
+              <span className="kw" key={`s-${s}`}><IconSliders size={12} /> {s}</span>
             ))}
           </div>
           <h4 style={{ marginTop: 14 }}>Interests</h4>
           <div className="kw-row">
             {team.interests.map((s) => (
-              <span className="kw kw-interest" key={`i-${s}`}>❤ {s}</span>
+              <span className="kw kw-interest" key={`i-${s}`}><IconHeart size={12} /> {s}</span>
             ))}
           </div>
           <h4 style={{ marginTop: 14 }}>About</h4>

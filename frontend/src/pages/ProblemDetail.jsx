@@ -4,6 +4,7 @@ import { api } from '../api.js'
 import { useAuth } from '../auth.jsx'
 import { useToast } from '../toast.jsx'
 import { Badge, DuplicateBadge, ErrorNote, LocationButton, ScoreBar, Select, Spinner, statusTone } from '../components/ui.jsx'
+import { IconAlert, IconBack, IconBox, IconCheck, IconClock, IconFileText, IconGraduationCap, IconMagnet, IconMapPin, IconRefresh, IconThumbsDown, IconThumbsUp, IconX } from '../components/icons.jsx'
 
 export default function ProblemDetail() {
   const { id } = useParams()
@@ -43,7 +44,7 @@ export default function ProblemDetail() {
           comment: feedbackComment
         }
       })
-      toast.push(`Feedback recorded: ${type === 'good_match' ? 'good match 👍' : 'bad match 👎'}`)
+      toast.push(`Feedback recorded: ${type === 'good_match' ? 'good match' : 'bad match'}`)
       setFeedbackComment('')
     } catch (err) {
       if (err.status !== 401) toast.push(`Feedback error: ${err.message}`, 'error')
@@ -62,7 +63,7 @@ export default function ProblemDetail() {
       })
       toast.push(
         correct
-          ? 'Thanks — confirmed the duplicate flag 👍'
+          ? 'Thanks — confirmed the duplicate flag'
           : 'Thanks — flagged the duplicate decision for review'
       )
       setFeedbackComment('')
@@ -94,7 +95,7 @@ export default function ProblemDetail() {
     <div>
       <div className="page-head">
         <div>
-          <p className="muted"><Link to="/dashboard">← back to my problems</Link></p>
+          <p className="muted"><Link to="/dashboard"><IconBack size={13} /> back to my problems</Link></p>
           <h1>#{p.id} · {p.title}</h1>
         </div>
         <div className="card-badges">
@@ -108,7 +109,7 @@ export default function ProblemDetail() {
 
       {p.is_duplicate && p.duplicate_of && (
         <div className="note note-warn">
-          ⚠️ Flagged as a <b>duplicate</b> of{' '}
+          <IconAlert size={16} /> Flagged as a <b>duplicate</b> of{' '}
           <Link to={`/problem/${p.duplicate_of.id}`}>#{p.duplicate_of.id} · {p.duplicate_of.title}</Link>{' '}
           ({trainedDup
             ? `classifier probability ${(p.duplicate_score ?? 0).toFixed(2)}`
@@ -116,10 +117,10 @@ export default function ProblemDetail() {
           {user && (
             <div className="fb-buttons" style={{ marginTop: 8 }}>
               <button className="btn btn-ghost btn-sm" onClick={() => sendDuplicateFeedback(true)}>
-                ✓ yes, duplicate
+                <IconCheck size={13} /> yes, duplicate
               </button>
               <button className="btn btn-ghost btn-sm" onClick={() => sendDuplicateFeedback(false)}>
-                ✕ not a duplicate
+                <IconX size={13} /> not a duplicate
               </button>
             </div>
           )}
@@ -129,7 +130,7 @@ export default function ProblemDetail() {
       {/* AI insight strip — every value comes from the live analysis payload */}
       <div className="ai-strip">
         <div className="ai-strip-item" title="Trained duplicate classifier">
-          <span className="ai-strip-icon">🔁</span>
+          <span className="ai-strip-icon" aria-hidden="true"><IconRefresh size={19} /></span>
           <div>
             <div className="ai-strip-value">
               {p.is_duplicate
@@ -143,7 +144,7 @@ export default function ProblemDetail() {
           </div>
         </div>
         <div className="ai-strip-item" title="K-Means problem cluster">
-          <span className="ai-strip-icon">📦</span>
+          <span className="ai-strip-icon" aria-hidden="true"><IconBox size={19} /></span>
           <div>
             <div className="ai-strip-value">{p.cluster || 'Unassigned'}</div>
             <div className="ai-strip-label">problem cluster</div>
@@ -151,7 +152,7 @@ export default function ProblemDetail() {
         </div>
         {topSimilar && (
           <div className="ai-strip-item" title="Most similar existing report">
-            <span className="ai-strip-icon">🧲</span>
+            <span className="ai-strip-icon" aria-hidden="true"><IconMagnet size={19} /></span>
             <div>
               <div className="ai-strip-value">
                 <Link to={`/problem/${topSimilar.id}`}>#{topSimilar.id} similar</Link>
@@ -164,7 +165,7 @@ export default function ProblemDetail() {
         )}
         {topTeam && (
           <div className="ai-strip-item" title="Top recommended student team">
-            <span className="ai-strip-icon">🎓</span>
+            <span className="ai-strip-icon" aria-hidden="true"><IconGraduationCap size={19} /></span>
             <div>
               <div className="ai-strip-value">{topTeam.team_name}</div>
               <div className="ai-strip-label">
@@ -180,13 +181,13 @@ export default function ProblemDetail() {
           <h3>Details</h3>
           <p className="card-text">{p.description}</p>
           <div className="card-meta">
-            <span>📦 cluster: {p.cluster || '—'}</span>
-            <span>🕒 {new Date(p.created_at).toLocaleString()}</span>
+            <span className="meta-item"><IconBox size={14} /> cluster: {p.cluster || '—'}</span>
+            <span className="meta-item"><IconClock size={14} /> {new Date(p.created_at).toLocaleString()}</span>
           </div>
           {p.location && (
             <div className="loc-block">
               <div>
-                <div className="loc-label">📍 Reported location</div>
+                <div className="loc-label"><IconMapPin size={14} /> Reported location</div>
                 <div className="loc-text">{p.location}</div>
               </div>
               <LocationButton location={p.location} />
@@ -252,8 +253,8 @@ export default function ProblemDetail() {
                   <ScoreBar value={t.score} label />
                   {user && (
                     <div className="fb-buttons">
-                      <button className="btn btn-ghost btn-sm" onClick={() => sendFeedback(t.match_id, 'good_match')}>👍</button>
-                      <button className="btn btn-ghost btn-sm" onClick={() => sendFeedback(t.match_id, 'bad_match')}>👎</button>
+                      <button className="btn btn-ghost btn-sm" onClick={() => sendFeedback(t.match_id, 'good_match')} aria-label="Good match"><IconThumbsUp size={14} /></button>
+                      <button className="btn btn-ghost btn-sm" onClick={() => sendFeedback(t.match_id, 'bad_match')} aria-label="Bad match"><IconThumbsDown size={14} /></button>
                     </div>
                   )}
                 </div>

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { IconAlert, IconMapPin } from './icons.jsx'
 import { Link } from 'react-router-dom'
 
 /*
@@ -153,7 +154,7 @@ export function DuplicateBadge({ p }) {
     const pct = p.duplicate_score != null ? Math.round(p.duplicate_score * 100) : null
     return (
       <span className="badge badge-red" title="Flagged as a probable duplicate by the trained classifier">
-        ⚠️ Duplicate{pct != null ? ` · ${pct}%` : ''}
+        <IconAlert size={13} /> Duplicate{pct != null ? ` · ${pct}%` : ''}
       </span>
     )
   }
@@ -190,7 +191,7 @@ export function LocationButton({ location, small = false, label = 'View Live Loc
   const cls = small ? 'loc-btn loc-btn-sm' : 'loc-btn'
   return (
     <a className={cls} href={url} target="_blank" rel="noreferrer noopener" title={`Open “${location}” in Google Maps`}>
-      <span className="loc-pin" aria-hidden="true">📍</span>
+      <span className="loc-pin" aria-hidden="true"><IconMapPin size={15} /></span>
       {label}
     </a>
   )

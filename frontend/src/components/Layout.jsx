@@ -3,23 +3,8 @@ import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-do
 import { useAuth } from '../auth.jsx'
 import { useTheme } from '../theme.jsx'
 import NotificationBell from './NotificationBell.jsx'
+import { IconBack, IconChart, IconClipboard, IconEdit, IconFwd, IconHome, IconLogout, IconMoon, IconSun, IconTarget, IconUser, IconUsers } from './icons.jsx'
 
-/* ---------- small inline SVG icons (crisp at any size, theme-aware) ---------- */
-const IconMenu = () => (
-  <svg viewBox="0 0 24 24" aria-hidden="true">
-    <line x1="4" y1="7" x2="20" y2="7" /><line x1="4" y1="12" x2="20" y2="12" /><line x1="4" y1="17" x2="20" y2="17" />
-  </svg>
-)
-const IconBack = () => (
-  <svg viewBox="0 0 24 24" aria-hidden="true">
-    <line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" />
-  </svg>
-)
-const IconFwd = () => (
-  <svg viewBox="0 0 24 24" aria-hidden="true">
-    <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
-  </svg>
-)
 
 function initials(name = '') {
   const parts = name.trim().split(/\s+/).filter(Boolean)
@@ -57,10 +42,10 @@ function navGroupsFor(user) {
     groups.push({
       label: user.role === 'admin' ? 'Citizen' : '',
       items: [
-        { to: '/dashboard', label: 'My Problems', icon: '📋' },
-        { to: '/submit', label: 'Submit Problem', icon: '📝' },
+        { to: '/dashboard', label: 'My Problems', icon: IconClipboard },
+        { to: '/submit', label: 'Submit Problem', icon: IconEdit },
         // citizens can browse (but not edit) team profiles
-        ...(user.role === 'citizen' ? [{ to: '/teams', label: 'Teams Directory', icon: '👥' }] : []),
+        ...(user.role === 'citizen' ? [{ to: '/teams', label: 'Teams Directory', icon: IconUsers }] : []),
       ],
     })
   }
@@ -68,21 +53,21 @@ function navGroupsFor(user) {
     groups.push({
       label: user.role === 'admin' ? 'Team' : '',
       items: [
-        { to: '/team', label: 'Team Home', icon: '🏠', end: true },
-        { to: '/team/recommended', label: 'Recommended', icon: '🎯' },
-        { to: '/teams', label: 'Teams Directory', icon: '👥' },
+        { to: '/team', label: 'Team Home', icon: IconHome, end: true },
+        { to: '/team/recommended', label: 'Recommended', icon: IconTarget },
+        { to: '/teams', label: 'Teams Directory', icon: IconUsers },
       ],
     })
   }
   if (user.role === 'admin') {
     groups.push({
       label: 'Admin',
-      items: [{ to: '/admin', label: 'Admin Dashboard', icon: '📊' }],
+      items: [{ to: '/admin', label: 'Admin Dashboard', icon: IconChart }],
     })
   }
   groups.push({
     label: user.role === 'admin' ? 'Account' : '',
-    items: [{ to: '/profile', label: 'My Profile', icon: '👤', end: true }],
+    items: [{ to: '/profile', label: 'My Profile', icon: IconUser, end: true }],
   })
   return groups
 }
@@ -91,8 +76,8 @@ function ThemeButton() {
   const { theme, toggle } = useTheme()
   return (
     <button className="theme-btn" onClick={toggle} aria-label="Toggle light / dark mode" title="Toggle light / dark mode">
-      <span className={theme === 'dark' ? 'theme-icon sun' : 'theme-icon moon'}>
-        {theme === 'dark' ? '☀️' : '🌙'}
+      <span className="theme-icon" aria-hidden="true">
+        {theme === 'dark' ? <IconSun size={18} /> : <IconMoon size={18} />}
       </span>
     </button>
   )
@@ -149,7 +134,7 @@ export default function Layout() {
                 onClick={() => setDrawer(false)}
                 className={({ isActive }) => 'nav-item' + (isActive ? ' active' : '')}
               >
-                <span className="nav-icon">{l.icon}</span>
+                <span className="nav-icon" aria-hidden="true">{l.icon ? <l.icon size={18} /> : null}</span>
                 <span className="nav-label">{l.label}</span>
               </NavLink>
             ))}
@@ -169,7 +154,7 @@ export default function Layout() {
         )}
         {user && (
           <button className="btn btn-ghost btn-block" onClick={onLogout}>
-            Log out
+            <IconLogout size={15} /> Log out
           </button>
         )}
       </div>

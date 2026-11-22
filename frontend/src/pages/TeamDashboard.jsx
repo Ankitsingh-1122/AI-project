@@ -5,6 +5,7 @@ import { useAuth } from '../auth.jsx'
 import { useToast } from '../toast.jsx'
 import TeamMessages from '../components/TeamMessages.jsx'
 import { ErrorNote } from '../components/ui.jsx'
+import { IconChevronRight, IconCpu, IconHeart, IconLogout, IconPlus, IconSliders, IconUsers, IconX } from '../components/icons.jsx'
 
 const emptyTeam = {
   team_name: '',
@@ -95,7 +96,7 @@ export default function TeamDashboard() {
       } else {
         await api('/api/teams', { method: 'POST', body })
       }
-      toast.push('✓ Team profile saved — matching now uses the new skills & interests')
+      toast.push('Team profile saved — matching now uses the new skills & interests')
       await load()
     } catch (err) {
       if (err.status !== 401) setError(err.message)
@@ -118,14 +119,14 @@ export default function TeamDashboard() {
     <div>
       <div className="page-head">
         <h1>Team profile</h1>
-        <Link to="/team/recommended" className="btn btn-outline">View recommendations →</Link>
+        <Link to="/team/recommended" className="btn btn-outline">View recommendations <IconChevronRight size={14} /></Link>
       </div>
 
       <ErrorNote>{error}</ErrorNote>
 
       {!team && deletedNote && !bannerHidden && (
         <div className="note note-danger team-deleted-banner">
-          <span className="tdb-ico" aria-hidden="true">🚪</span>
+          <span className="tdb-ico" aria-hidden="true"><IconLogout size={22} /></span>
           <div className="tdb-body">
             <b>Your team was removed by an administrator.</b>
             <div className="tdb-text">{deletedNote.body}</div>
@@ -137,7 +138,7 @@ export default function TeamDashboard() {
             title="Dismiss (the record stays in your notifications)"
             onClick={() => setBannerHidden(true)}
           >
-            ✕
+            <IconX size={16} />
           </button>
         </div>
       )}
@@ -188,7 +189,7 @@ export default function TeamDashboard() {
               <input value={m.name} onChange={(e) => setMember(i, 'name', e.target.value)} placeholder="Member name" />
               <input value={m.role} onChange={(e) => setMember(i, 'role', e.target.value)} placeholder="role" className="role-input" />
               {form.members.length > 1 && (
-                <button type="button" className="btn btn-ghost btn-sm" onClick={() => removeMember(i)}>✕</button>
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => removeMember(i)} aria-label="Remove member"><IconX size={14} /></button>
               )}
             </div>
           ))}
@@ -199,7 +200,7 @@ export default function TeamDashboard() {
             disabled={form.members.length >= MAX_TEAM_MEMBERS}
             title={form.members.length >= MAX_TEAM_MEMBERS ? `Maximum ${MAX_TEAM_MEMBERS} members per team` : 'Add another member'}
           >
-            + Add member
+            <IconPlus size={14} /> Add member
           </button>
           {form.members.length >= MAX_TEAM_MEMBERS && (
             <p className="muted small" role="note">
@@ -222,16 +223,16 @@ export default function TeamDashboard() {
           </div>
           <div className="kw-row" style={{ marginTop: 12 }}>
             {form.skills.split(',').map((s) => s.trim()).filter(Boolean).map((s) => (
-              <span className="kw" key={`s-${s}`}>⚙ {s}</span>
+              <span className="kw" key={`s-${s}`}><IconSliders size={12} /> {s}</span>
             ))}
             {form.interests.split(',').map((s) => s.trim()).filter(Boolean).map((s) => (
-              <span className="kw kw-interest" key={`i-${s}`}>❤ {s}</span>
+              <span className="kw kw-interest" key={`i-${s}`}><IconHeart size={12} /> {s}</span>
             ))}
           </div>
           {team && (
             <div className="card-meta">
-              <span>👥 {team.members.length} members</span>
-              <span>🤖 team id: {team.id}</span>
+              <span className="meta-item"><IconUsers size={14} /> {team.members.length} members</span>
+              <span className="meta-item"><IconCpu size={14} /> team id: {team.id}</span>
             </div>
           )}
         </div>

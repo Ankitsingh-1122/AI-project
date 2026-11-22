@@ -3,14 +3,15 @@ import { Link } from 'react-router-dom'
 import { api } from '../api.js'
 import { useAuth } from '../auth.jsx'
 import { useTheme } from '../theme.jsx'
+import { IconChart, IconGraduationCap, IconLayers, IconMoon, IconRefresh, IconSparkles, IconSun, IconUsers } from '../components/icons.jsx'
 
 const FEATURES = [
-  { icon: '🔁', title: 'Duplicate detection', text: 'New reports are compared against every existing problem with semantic similarity. Near-duplicates are flagged instantly on submission.' },
-  { icon: '🧠', title: 'Semantic understanding', text: '“Street light is broken” and “the streetlamp has stopped working” are recognised as the same problem, even with different words.' },
-  { icon: '📦', title: 'Automatic clustering', text: 'Related problems are grouped into meaningful clusters with K-Means, auto-selecting the number of clusters via silhouette score.' },
-  { icon: '🎓', title: 'Student-team matching', text: 'Each problem is matched to student teams by skills, interests and experience - with explainable, ranked recommendations.' },
-  { icon: '📊', title: 'Measurable AI', text: 'Precision, recall, F1, confusion matrix, Precision@K and cluster purity are computed on labelled evaluation data.' },
-  { icon: '👥', title: 'Feedback loop', text: 'Citizens and admins can rate AI decisions; feedback is stored for continuous model improvement.' },
+  { icon: IconRefresh, title: 'Duplicate detection', text: 'New reports are compared against every existing problem with semantic similarity. Near-duplicates are flagged instantly on submission.' },
+  { icon: IconSparkles, title: 'Semantic understanding', text: '“Street light is broken” and “the streetlamp has stopped working” are recognised as the same problem, even with different words.' },
+  { icon: IconLayers, title: 'Automatic clustering', text: 'Related problems are grouped into meaningful clusters with K-Means, auto-selecting the number of clusters via silhouette score.' },
+  { icon: IconGraduationCap, title: 'Student-team matching', text: 'Each problem is matched to student teams by skills, interests and experience - with explainable, ranked recommendations.' },
+  { icon: IconChart, title: 'Measurable AI', text: 'Precision, recall, F1, confusion matrix, Precision@K and cluster purity are computed on labelled evaluation data.' },
+  { icon: IconUsers, title: 'Feedback loop', text: 'Citizens and admins can rate AI decisions; feedback is stored for continuous model improvement.' },
 ]
 
 export default function Landing() {
@@ -34,8 +35,8 @@ export default function Landing() {
         </Link>
         <div className="topbar-right">
           <button className="theme-btn" onClick={toggle} aria-label="Toggle light / dark mode" title="Toggle light / dark mode">
-            <span className={theme === 'dark' ? 'theme-icon sun' : 'theme-icon moon'}>
-              {theme === 'dark' ? '☀️' : '🌙'}
+            <span className="theme-icon" aria-hidden="true">
+              {theme === 'dark' ? <IconSun size={18} /> : <IconMoon size={18} />}
             </span>
           </button>
           <Link to={user ? home : '/login'} className="btn btn-ghost btn-sm">
@@ -52,7 +53,7 @@ export default function Landing() {
       <section className="hero">
         <div className="hero-text">
           <img src="/logo.png" className="hero-logo" alt="CivicAI — Smart Citizens, Smart Solutions" />
-          <span className="hero-badge">🧠 AI/ML civic platform · live trained models</span>
+          <span className="hero-badge"><IconSparkles size={15} /> AI/ML civic platform · live trained models</span>
           <h1>
             Citizen problems, <span className="grad">understood</span>, deduplicated & matched.
           </h1>
@@ -93,7 +94,7 @@ export default function Landing() {
       <section className="features">
         {FEATURES.map((f) => (
           <div className="feature-card" key={f.title}>
-            <div className="feature-icon">{f.icon}</div>
+            <div className="feature-icon" aria-hidden="true"><f.icon size={21} /></div>
             <h3>{f.title}</h3>
             <p>{f.text}</p>
           </div>

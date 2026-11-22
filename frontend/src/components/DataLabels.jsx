@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { api } from '../api.js'
 import { Badge, Empty, Spinner } from './ui.jsx'
+import { IconBack, IconCheck, IconCpu, IconFwd, IconPlus, IconX } from './icons.jsx'
 import { useToast } from '../toast.jsx'
 
 const SOURCE_LABEL = {
@@ -67,7 +68,7 @@ export default function DataLabels({ refreshKey = 0 }) {
     setPairs({ ...pairs, total: pairs.total - 1, pairs: pairs.pairs.filter((x) => x.id !== pair.id) })
     try {
       await api(`/api/labels/pairs/${pair.id}`, { method: 'POST', body: { is_duplicate: isDuplicate } })
-      toast.push(isDuplicate ? '✓ Marked as duplicate' : '✓ Marked as not a duplicate')
+      toast.push(isDuplicate ? 'Marked as duplicate' : 'Marked as not a duplicate')
       loadStatus()
       if (pairOffset > 0 && (pairs.pairs.length - 1) <= 0) {
         setPairOffset(pairOffset - 5)
@@ -147,10 +148,10 @@ export default function DataLabels({ refreshKey = 0 }) {
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button className="btn btn-outline btn-sm" disabled={!!busy} onClick={mine}>
-            {busy === 'mine' ? 'Mining…' : '＋ Mine more candidates'}
+            {busy === 'mine' ? 'Mining…' : <><IconPlus size={14} /> Mine more candidates</>}
           </button>
           <button className="btn btn-primary btn-sm" disabled={!!busy} onClick={train}>
-            {busy === 'train' ? 'Training…' : '▶ Train models now'}
+            {busy === 'train' ? 'Training…' : <><IconCpu size={14} /> Train models now</>}
           </button>
         </div>
       </div>
@@ -219,20 +220,20 @@ export default function DataLabels({ refreshKey = 0 }) {
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                  <button className="btn btn-primary btn-sm" onClick={() => labelPair(p, true)}>✓ Duplicate</button>
-                  <button className="btn btn-outline btn-sm" onClick={() => labelPair(p, false)}>✗ Not a duplicate</button>
+                  <button className="btn btn-primary btn-sm" onClick={() => labelPair(p, true)}><IconCheck size={14} /> Duplicate</button>
+                  <button className="btn btn-outline btn-sm" onClick={() => labelPair(p, false)}><IconX size={14} /> Not a duplicate</button>
                 </div>
               </div>
             </div>
           ))}
           <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
             <button className="btn btn-ghost btn-sm" disabled={pairOffset === 0}
-              onClick={() => { setPairOffset(pairOffset - 5); loadPairs(pairOffset - 5) }}>← Prev</button>
+              onClick={() => { setPairOffset(pairOffset - 5); loadPairs(pairOffset - 5) }}><IconBack size={13} /> Prev</button>
             <span className="muted small" style={{ alignSelf: 'center' }}>
               {Math.min(pairOffset + 5, pairs.total)} of {pairs.total}
             </span>
             <button className="btn btn-ghost btn-sm" disabled={pairOffset + 5 >= pairs.total}
-              onClick={() => { setPairOffset(pairOffset + 5); loadPairs(pairOffset + 5) }}>Next →</button>
+              onClick={() => { setPairOffset(pairOffset + 5); loadPairs(pairOffset + 5) }}>Next <IconFwd size={13} /></button>
           </div>
         </div>
       )}
@@ -262,7 +263,7 @@ export default function DataLabels({ refreshKey = 0 }) {
                     className={'btn btn-sm ' + (t.relevant === 1 ? 'btn-primary' : t.relevant === 0 ? 'btn-outline' : 'btn-ghost')}
                     onClick={() => toggleRelevant(it.problem.id, t.team_id, t.relevant === 1 ? 0 : 1)}
                     title={t.relevant == null ? 'Click to mark relevant / not relevant' : 'Click to toggle'}>
-                    {t.relevant === 1 ? '✓ ' : t.relevant === 0 ? '✗ ' : '· '}
+                    {t.relevant === 1 ? <IconCheck size={13} /> : t.relevant === 0 ? <IconX size={13} /> : '·'}
                     {t.team_name}
                   </button>
                 ))}
@@ -271,12 +272,12 @@ export default function DataLabels({ refreshKey = 0 }) {
           ))}
           <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
             <button className="btn btn-ghost btn-sm" disabled={relOffset === 0}
-              onClick={() => { setRelOffset(relOffset - 3); loadRel(relView, relOffset - 3) }}>← Prev</button>
+              onClick={() => { setRelOffset(relOffset - 3); loadRel(relView, relOffset - 3) }}><IconBack size={13} /> Prev</button>
             <span className="muted small" style={{ alignSelf: 'center' }}>
               page {Math.floor(relOffset / 3) + 1}
             </span>
             <button className="btn btn-ghost btn-sm" disabled={rel.items.length < 3}
-              onClick={() => { setRelOffset(relOffset + 3); loadRel(relView, relOffset + 3) }}>Next →</button>
+              onClick={() => { setRelOffset(relOffset + 3); loadRel(relView, relOffset + 3) }}>Next <IconFwd size={13} /></button>
           </div>
         </div>
       )}

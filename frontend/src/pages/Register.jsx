@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth.jsx'
 import { Select } from '../components/ui.jsx'
+import { IconInbox } from '../components/icons.jsx'
 
 export default function Register() {
   const { register } = useAuth()
@@ -43,7 +44,7 @@ export default function Register() {
             <span className="brand-icon"><img src="/logo-mark.png" alt="" aria-hidden="true" /></span>
             <span>Civic<span className="grad">AI</span></span>
           </div>
-          <div className="confirm-ico" aria-hidden="true">📬</div>
+          <div className="confirm-ico" aria-hidden="true"><IconInbox size={40} /></div>
           <h1>Check your email</h1>
           <p className="muted" style={{ textAlign: 'center' }}>
             Your CivicAI account was created on Supabase. We sent a confirmation link to

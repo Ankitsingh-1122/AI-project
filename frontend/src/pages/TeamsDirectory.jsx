@@ -4,6 +4,7 @@ import { api } from '../api.js'
 import { useAuth } from '../auth.jsx'
 import { useToast } from '../toast.jsx'
 import { Badge, Empty, ErrorNote, Spinner } from '../components/ui.jsx'
+import { IconAward, IconHeart, IconSliders, IconTrash } from '../components/icons.jsx'
 
 export default function TeamsDirectory() {
   const { user } = useAuth()
@@ -36,11 +37,11 @@ export default function TeamsDirectory() {
     setDeleting(t.id)
     try {
       await api(`/api/teams/${t.id}`, { method: 'DELETE' })
-      toast.push(`🗑 Team “${t.team_name}” removed from the directory`)
+      toast.push(`Team “${t.team_name}” removed from the directory`)
       await load()
       window.dispatchEvent(new Event('civic-notifications'))
     } catch (err) {
-      toast.push('⚠️ Could not delete team: ' + err.message)
+      toast.push('Could not delete team: ' + err.message)
     } finally {
       setDeleting(null)
     }
@@ -61,7 +62,7 @@ export default function TeamsDirectory() {
         <h1>Student teams</h1>
         <input
           className="search-input"
-          placeholder="🔍 search by skill or interest…"
+          placeholder="Search by skill or interest…"
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
@@ -85,17 +86,17 @@ export default function TeamsDirectory() {
                 <p className="card-text">{t.description}</p>
                 <div className="kw-row">
                   {t.skills.map((s) => (
-                    <span className="kw" key={`s-${s}`}>⚙ {s}</span>
+                    <span className="kw" key={`s-${s}`}><IconSliders size={12} /> {s}</span>
                   ))}
                 </div>
                 <div className="kw-row">
                   {t.interests.map((s) => (
-                    <span className="kw kw-interest" key={`i-${s}`}>❤ {s}</span>
+                    <span className="kw kw-interest" key={`i-${s}`}><IconHeart size={12} /> {s}</span>
                   ))}
                 </div>
                 {t.experience && (
                   <p className="muted small" style={{ marginTop: 8 }}>
-                    🏆 {t.experience}
+                    <IconAward size={14} /> {t.experience}
                   </p>
                 )}
                 <p className="small" style={{ marginTop: 10, fontWeight: 700, color: 'var(--primary)' }}>
@@ -115,7 +116,7 @@ export default function TeamsDirectory() {
                     onDelete(t)
                   }}
                 >
-                  {deleting === t.id ? '…' : '🗑'}
+                  {deleting === t.id ? '…' : <IconTrash size={15} />}
                 </button>
               )}
             </div>

@@ -4,6 +4,7 @@ import {
   Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart,
   ResponsiveContainer, Tooltip, XAxis, YAxis
 } from 'recharts'
+import { IconAlert, IconBox, IconCheckCircle, IconClipboard, IconCpu, IconLayers, IconRefresh, IconUsers } from '../components/icons.jsx'
 import { api, apiBlob } from '../api.js'
 import { useTheme } from '../theme.jsx'
 import { Badge, Empty, ErrorNote, Spinner, StatCard } from '../components/ui.jsx'
@@ -109,27 +110,27 @@ export default function AdminDashboard() {
     <div>
       <div className="page-head">
         <h1>Admin dashboard</h1>
-        <button className="btn btn-ghost btn-sm" onClick={load}>↻ Refresh</button>
+        <button className="btn btn-ghost btn-sm" onClick={load}><IconRefresh size={14} /> Refresh</button>
       </div>
 
       <ErrorNote>{error}</ErrorNote>
 
       <div className="stat-grid">
-        <StatCard label="Total problems" value={stats.total_problems} tone="blue" icon="🧾"
+        <StatCard label="Total problems" value={stats.total_problems} tone="blue" icon={<IconClipboard />}
           to="/dashboard" title="Open the problems list" />
-        <StatCard label="Unique problems" value={stats.unique_problems} tone="green" icon="✅"
+        <StatCard label="Unique problems" value={stats.unique_problems} tone="green" icon={<IconCheckCircle />}
           to="/dashboard?dup=unique" title="Show unique (non-duplicate) problems" />
         <StatCard label="Duplicate reports" value={stats.duplicate_reports}
           sub={stats.total_problems ? `${((stats.duplicate_reports / stats.total_problems) * 100).toFixed(0)}% of all reports` : ''}
-          tone="red" icon="⚠️"
+          tone="red" icon={<IconAlert />}
           to="/dashboard?dup=duplicates" title="Show duplicate reports" />
-        <StatCard label="Clusters" value={stats.clusters} tone="violet" icon="📦"
+        <StatCard label="Clusters" value={stats.clusters} tone="violet" icon={<IconLayers />}
           to="/admin#clusters" title="Jump to the clusters section below" />
-        <StatCard label="Registered teams" value={stats.registered_teams} tone="amber" icon="👥"
+        <StatCard label="Registered teams" value={stats.registered_teams} tone="amber" icon={<IconUsers />}
           to="/teams" title="Open the teams directory" />
         <StatCard label="AI recommendations" value={stats.total_recommendations}
           sub={`${stats.match_status?.accepted || 0} accepted · ${stats.match_status?.rejected || 0} rejected`}
-          tone="teal" icon="🤖"
+          tone="teal" icon={<IconCpu />}
           to="/admin#model-performance" title="Jump to the AI/ML performance section" />
       </div>
 
@@ -319,7 +320,7 @@ export default function AdminDashboard() {
             clusters?.map((c) => (
               <details className="cluster" key={c.id} open={c.size <= 8}>
                 <summary>
-                  <b>📦 {c.name}</b>
+                  <b><IconBox size={15} aria-hidden="true" /> {c.name}</b>
                   <Badge tone="violet">{c.size} problems</Badge>
                 </summary>
                 <ul className="cluster-members">

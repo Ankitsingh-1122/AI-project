@@ -1,10 +1,16 @@
 import { useState } from 'react'
-import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../auth.jsx'
+import { IconShield, IconUser, IconUsers } from '../components/icons.jsx'
+
+const DEMO_ACCOUNTS = [
+  { role: 'admin', label: 'Admin', email: 'admin@civic.demo', password: 'admin123', Icon: IconShield },
+  { role: 'citizen', label: 'Citizen', email: 'citizen1@civic.demo', password: 'demo123', Icon: IconUser },
+  { role: 'team', label: 'Team', email: 'team1@civic.demo', password: 'demo123', Icon: IconUsers },
+]
 
 export default function Login() {
   const { login } = useAuth()
-  const navigate = useNavigate()
   const location = useLocation()
   const [params] = useSearchParams()
   const [email, setEmail] = useState('')
@@ -12,12 +18,11 @@ export default function Login() {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 
-  async function submit(e) {
-    e.preventDefault()
+  async function doLogin(loginEmail, loginPassword) {
     setBusy(true)
     setError('')
     try {
-      const user = await login(email, password)
+      const user = await login(loginEmail, loginPassword)
       const next = params.get('next')
       const to =
         next && next !== '/login' ? next :
@@ -28,9 +33,19 @@ export default function Login() {
       window.location.assign(to)
     } catch (err) {
       setError(err.message)
-    } finally {
       setBusy(false)
     }
+  }
+
+  function submit(e) {
+    e.preventDefault()
+    doLogin(email, password)
+  }
+
+  function demoClick(acc) {
+    setEmail(acc.email)
+    setPassword(acc.password)
+    doLogin(acc.email, acc.password)
   }
 
   return (
@@ -58,10 +73,18 @@ export default function Login() {
           No account? <Link to="/register">Create one</Link>
         </p>
         <div className="demo-creds">
-          <b>Demo accounts (seeded data)</b>
-          <button type="button" onClick={() => { setEmail('admin@civic.demo'); setPassword('admin123') }}>admin</button>
-          <button type="button" onClick={() => { setEmail('citizen1@civic.demo'); setPassword('demo123') }}>citizen</button>
-          <button type="button" onClick={() => { setEmail('team1@civic.demo'); setPassword('demo123') }}>team</button>
+          <div className="demo-creds-label">
+            Demo accounts <small>seeded data · click to log in</small>
+          </div>
+          <div className="demo-btns">
+            {DEMO_ACCOUNTS.map(({ role, label, Icon }) => (
+              <button key={role} type="button" className={`demo-btn tone-${role}`}
+                      disabled={busy} onClick={() => demoClick(DEMO_ACCOUNTS.find(a => a.role === role))}>
+                <Icon size={15} aria-hidden="true" />
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
     </div>

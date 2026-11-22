@@ -53,7 +53,7 @@ export default function TeamMessages({ teamId, teamName }) {
       // let the notification bell refresh its badge right away
       window.dispatchEvent(new Event('civic-notifications'))
     } catch (err) {
-      toast.push('⚠️ Could not send message: ' + err.message)
+      toast.push('Could not send message: ' + err.message)
     } finally {
       setBusy(false)
     }

@@ -4,6 +4,7 @@ import { api } from '../api.js'
 import { useAuth } from '../auth.jsx'
 import { useToast } from '../toast.jsx'
 import { Badge, ErrorNote } from '../components/ui.jsx'
+import { IconCopy, IconInfo } from '../components/icons.jsx'
 
 function initials(name = '') {
   const parts = name.trim().split(/\s+/).filter(Boolean)
@@ -93,7 +94,7 @@ export default function Profile() {
             <span className="pf-label">Email</span>
             <span className="pf-value">
               {me.email}
-              <button className="copy-btn" onClick={() => copy(me.email, 'Email')} title="Copy email">⧉ copy</button>
+              <button className="copy-btn" onClick={() => copy(me.email, 'Email')} title="Copy email"><IconCopy size={13} /> copy</button>
             </span>
           </div>
           <div className="profile-field">
@@ -108,7 +109,7 @@ export default function Profile() {
             <span className="pf-label">User ID</span>
             <span className="pf-value">
               #{me.id}
-              <button className="copy-btn" onClick={() => copy(String(me.id), 'User ID')} title="Copy ID">⧉ copy</button>
+              <button className="copy-btn" onClick={() => copy(String(me.id), 'User ID')} title="Copy ID"><IconCopy size={13} /> copy</button>
             </span>
           </div>
         </div>
@@ -150,7 +151,7 @@ export default function Profile() {
             </>
           )}
           <div className="profile-note" style={{ marginTop: 14 }}>
-            <span aria-hidden="true">ℹ️</span>
+            <span aria-hidden="true"><IconInfo size={16} /></span>
             <span>
               Editing name, password or adding a profile photo needs a user-update API endpoint.
               This build is UI-only and the backend contract is unchanged, so account details

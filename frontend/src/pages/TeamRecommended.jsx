@@ -4,11 +4,13 @@ import { api } from '../api.js'
 import { useAuth } from '../auth.jsx'
 import { useToast } from '../toast.jsx'
 import { Badge, Empty, ErrorNote, LocationButton, ScoreBar, Spinner } from '../components/ui.jsx'
+import { IconCheck, IconCpu, IconMapPin, IconThumbsDown, IconThumbsUp, IconX } from '../components/icons.jsx'
 
 export default function TeamRecommended() {
   const { user } = useAuth()
   const toast = useToast()
   const [recs, setRecs] = useState(null)
+  const [noTeam, setNoTeam] = useState(false)
   const [error, setError] = useState('')
   const [filter, setFilter] = useState('suggested')
 
@@ -19,7 +21,13 @@ export default function TeamRecommended() {
   async function load() {
     try {
       const me = await api('/api/auth/me')
-      if (!me.team_id) return
+      if (!me.team_id) {
+        // No team on this account (e.g. admin browsing) — show a clear
+        // empty state instead of waiting forever.
+        setNoTeam(true)
+        setRecs([])
+        return
+      }
       const data = await api('/api/teams/my-recommendations')
       setRecs(data)
     } catch (err) {
@@ -35,7 +43,7 @@ export default function TeamRecommended() {
       const r = await api(`/api/teams/matches/${matchId}/decision`, { method: 'POST', body: { status } })
       toast.push(
         status === 'accept'
-          ? `✓ Problem accepted — status is now “${r.problem_status}”`
+          ? `Problem accepted — status is now “${r.problem_status}”`
           : 'Recommendation rejected'
       )
       await load()
@@ -47,7 +55,7 @@ export default function TeamRecommended() {
   async function feedback(matchId, type) {
     try {
       await api('/api/feedback', { method: 'POST', body: { feedback_type: type, match_id: matchId } })
-      toast.push(`Feedback recorded: ${type === 'good_match' ? 'good rec 👍' : 'bad rec 👎'}`)
+      toast.push(`Feedback recorded: ${type === 'good_match' ? 'good rec' : 'bad rec'}`)
     } catch (err) {
       if (err.status !== 401) toast.push(`Feedback error: ${err.message}`, 'error')
     }
@@ -57,10 +65,21 @@ export default function TeamRecommended() {
   if (!recs) return <Spinner />
   if (recs.length === 0)
     return (
-      <Empty>
-        No recommendations yet. Make sure your <Link to="/team">team profile</Link> is registered
-        with skills and interests.
-      </Empty>
+      <div>
+        <div className="page-head">
+          <h1>Recommended for your team</h1>
+        </div>
+        <Empty>
+          {noTeam
+            ? <>This account isn't associated with a team, so there are no team recommendations to show here.{' '}
+              {user.role === 'admin'
+                ? <>You can browse every team in the <Link to="/teams">Teams Directory</Link>.</>
+                : <>Once you register a <Link to="/team">team profile</Link>, matching problems will appear here.</>}
+            </>
+            : <>No recommendations yet. Make sure your <Link to="/team">team profile</Link> is registered
+              with skills and interests.</>}
+        </Empty>
+      </div>
     )
 
   // A problem can generate more than one match row for the same team
@@ -118,22 +137,22 @@ export default function TeamRecommended() {
               <b>Why you:</b> {r.explanation}
             </div>
             <div className="card-meta">
-              {r.location && <span className="meta-item">📍 {r.location}</span>}
-              <span className="meta-item">🤖 relevance</span>
+              {r.location && <span className="meta-item"><IconMapPin size={14} /> {r.location}</span>}
+              <span className="meta-item"><IconCpu size={14} /> relevance</span>
               <ScoreBar value={r.score} label />
               <LocationButton location={r.location} small label="View Live Location" />
             </div>
             {r.match_status === 'suggested' && (
               <div className="rec-actions">
                 <button className="btn btn-primary btn-sm" onClick={() => decide(r.match_id, 'accept')}>
-                  ✓ Accept problem
+                  <IconCheck size={14} /> Accept problem
                 </button>
                 <button className="btn btn-ghost btn-sm" onClick={() => decide(r.match_id, 'reject')}>
-                  ✕ Not for us
+                  <IconX size={14} /> Not for us
                 </button>
                 <span className="fb-buttons">
-                  <button className="btn btn-ghost btn-sm" onClick={() => feedback(r.match_id, 'good_match')}>👍 good rec</button>
-                  <button className="btn btn-ghost btn-sm" onClick={() => feedback(r.match_id, 'bad_match')}>👎 bad rec</button>
+                  <button className="btn btn-ghost btn-sm" onClick={() => feedback(r.match_id, 'good_match')}><IconThumbsUp size={13} /> good rec</button>
+                  <button className="btn btn-ghost btn-sm" onClick={() => feedback(r.match_id, 'bad_match')}><IconThumbsDown size={13} /> bad rec</button>
                 </span>
               </div>
             )}

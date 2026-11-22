@@ -23,13 +23,16 @@ class TfidfEmbedder:
 
     def fit(self, docs: list[str]):
         docs = [d if d.strip() else "empty" for d in docs]
-        self.vectorizer = TfidfVectorizer(
+        # Build + fit locally, then publish: concurrent readers (uvicorn
+        # threadpool) must never observe an assigned-but-unfitted vectorizer.
+        vec = TfidfVectorizer(
             max_features=2000,
             ngram_range=(1, 1),
             sublinear_tf=True,
             min_df=1,
         )
-        self.vectorizer.fit(docs)
+        vec.fit(docs)
+        self.vectorizer = vec
         self.fit_corpus = list(docs)
         return self
 
@@ -46,7 +49,7 @@ class TfidfEmbedder:
         """Keywords with TF-IDF weight for a document (used in explanations)."""
         from .preprocess import STOPWORDS
 
-        if self.vectorizer is None:
+        if self.vectorizer is None or self.vectorizer.vocabulary_ is None:
             return []
         vec = self.vectorizer.transform([doc])[0]
         ranked = np.argsort(-vec.toarray().ravel())
@@ -75,8 +78,11 @@ class SentenceEmbedder:
         self.vectorizer = TfidfEmbedder()  # for keyword extraction
 
     def fit(self, docs: list[str]):
-        # no fitting needed; tfidf part used for keywords
-        self.vectorizer.fit([d if d.strip() else "empty" for d in docs])
+        # no fitting needed for the sentence model; the TF-IDF keyword
+        # extractor is fit + published atomically (see TfidfEmbedder.fit).
+        tfidf = TfidfEmbedder()
+        tfidf.fit([d if d.strip() else "empty" for d in docs])
+        self.vectorizer = tfidf
         return self
 
     def transform(self, docs: list[str]) -> np.ndarray:

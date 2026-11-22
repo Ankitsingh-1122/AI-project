@@ -35,11 +35,6 @@ export default function App() {
     : '/'
   return (
     <ToastProvider>
-      <div className="bg-glow" aria-hidden="true">
-        <i className="glow glow-1" />
-        <i className="glow glow-2" />
-        <i className="glow glow-3" />
-      </div>
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />

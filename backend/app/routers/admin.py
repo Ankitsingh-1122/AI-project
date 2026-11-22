@@ -97,12 +97,25 @@ import seaborn as sns
 from fastapi import HTTPException
 from fastapi.responses import Response
 
-CHART_PALETTE = ["#4f46e5", "#16a34a", "#dc2626", "#7c3aed", "#ea580c", "#0891b2", "#ca8a04", "#db2777"]
-STATUS_COLORS = {"open": "#4f46e5", "in_review": "#d97706", "assigned": "#7c3aed", "resolved": "#16a34a"}
+# Palette policy:
+#   * categorical comparisons (categories) -> seaborn's built-in categorical
+#     palette "muted" (colorblind-safe, professional, consistent across charts)
+#   * statuses -> the same fixed hues the UI badges use, so a status keeps one
+#     color everywhere (legend == UI). Light/dark variants keep contrast.
+#   * timeline -> two fixed series colors (primary indigo / warning amber).
+# These data are counts/labels (categorical), so no sequential or diverging
+# scales are used — that guidance applies only to continuous data.
 
+CAT_PALETTE = sns.color_palette("muted", as_cmap=False)
+STATUS_LIGHT = {"open": "#4f46e5", "in_review": "#d97706", "assigned": "#7c3aed", "resolved": "#16a34a"}
+STATUS_DARK = {"open": "#818cf8", "in_review": "#fbbf24", "assigned": "#a78bfa", "resolved": "#4ade80"}
+SERIES_COLORS_LIGHT = {"Cumulative problems": "#4f46e5", "Duplicates caught": "#d97706"}
+SERIES_COLORS_DARK = {"Cumulative problems": "#818cf8", "Duplicates caught": "#fbbf24"}
+
+# Per-theme ink/axis/grid colors (transparent figure; the app card is the surface).
 THEMES = {
-    "light": dict(text="#0b1220", muted="#5b6b84", grid="#0f172a24", spine="#94a3b8"),
-    "dark": dict(text="#e2e8f0", muted="#94a3b8", grid="#e2e8f02e", spine="#475569"),
+    "light": dict(text="#0f1522", muted="#5d6b82", grid="#0f172a24", spine="#cdd5e0"),
+    "dark": dict(text="#f5f7fb", muted="#97a4bb", grid="#e7ecf529", spine="#33415e"),
 }
 
 
@@ -122,59 +135,22 @@ def _apply_theme(theme: str) -> dict:
             "figure.facecolor": "none",
             "savefig.facecolor": "none",
             "grid.color": c["grid"],
+            "legend.fontsize": 10,
         },
     )
     return c
 
 
 def _render_png(fig) -> bytes:
+    fig.tight_layout()
     buf = io.BytesIO()
-    fig.savefig(buf, format="png", dpi=150, transparent=True, bbox_inches="tight", pad_inches=0.18)
+    fig.savefig(buf, format="png", dpi=150, transparent=True, bbox_inches="tight", pad_inches=0.15)
     plt.close(fig)
     return buf.getvalue()
 
 
-def _chart_category(problems: list[Problem], theme: str) -> bytes:
-    c = _apply_theme(theme)
-    counts = Counter(p.category.replace("_", " ") for p in problems)
-    df = pd.DataFrame(sorted(counts.items(), key=lambda kv: (-kv[1], kv[0])), columns=["category", "count"])
-    fig, ax = plt.subplots(figsize=(7.4, 4.1))
-    sns.barplot(data=df, x="count", y="category", hue="category", palette=CHART_PALETTE, legend=False, ax=ax)
-    ax.set_title("Problems by category", fontsize=14, fontweight="bold", loc="left", pad=12)
-    ax.set_xlabel("Reports")
-    ax.xaxis.grid(True, alpha=0.5)
-    ax.set_axisbelow(True)
-    sns.despine(left=False)
-    for i, v in enumerate(df["count"]):
-        ax.text(v + 0.15, i, str(int(v)), va="center", fontsize=10, color=c["muted"])
-    return _render_png(fig)
-
-
-def _chart_status(problems: list[Problem], theme: str) -> bytes:
-    c = _apply_theme(theme)
-    counts = Counter(p.status.replace("_", " ") for p in problems)
-    order = [s for s in ["open", "in review", "assigned", "resolved"] if s in counts]
-    values = [counts[k] for k in order]
-    colors = [STATUS_COLORS.get(k.replace(" ", "_"), "#64748b") for k in order]
-    total = sum(values) or 1
-    fig, ax = plt.subplots(figsize=(5.4, 4.4))
-    wedges, _ = ax.pie(
-        values,
-        colors=colors,
-        startangle=90,
-        counterclock=False,
-        wedgeprops=dict(width=0.42, edgecolor="white", linewidth=2),
-    )
-    # percentage labels on slice midpoints
-    for wedge, v in zip(wedges, values):
-        ang = (wedge.theta2 + wedge.theta1) / 2
-        x, y = 0.79 * np.cos(np.deg2rad(ang)), 0.79 * np.sin(np.deg2rad(ang))
-        ax.text(x, y, f"{v / total:.0%}", ha="center", va="center", fontsize=10, fontweight="bold", color="white")
-    ax.set_title("Problems by status", fontsize=14, fontweight="bold", loc="left", pad=12)
-    ax.text(0, 0.10, str(total), ha="center", va="center", fontsize=30, fontweight="bold", color=c["text"])
-    ax.text(0, -0.20, "total", ha="center", va="center", fontsize=10, color=c["muted"])
-    ax.legend(wedges, [f"{k}  ({v})" for k, v in zip(order, values)], loc="upper center", bbox_to_anchor=(0.5, -0.06), ncol=2, frameon=False, fontsize=10)
-    return _render_png(fig)
+def _status_palette(theme: str) -> dict:
+    return STATUS_DARK if theme == "dark" else STATUS_LIGHT
 
 
 def _bucketize(dates: list) -> tuple[list[datetime], str]:
@@ -233,7 +209,79 @@ def _bucket_of(dt: datetime, bucket: datetime, step) -> bool:
     return dt.replace(minute=0, second=0, microsecond=0) == bucket
 
 
+def _chart_category(problems: list[Problem], theme: str) -> bytes:
+    """Horizontal bar chart — a categorical comparison, so the seaborn
+    categorical palette is mapped with hue= and no misleading value scale."""
+    _apply_theme(theme)
+    counts = Counter((p.category or "uncategorized").replace("_", " ") for p in problems)
+    df = pd.DataFrame(
+        sorted(counts.items(), key=lambda kv: (-kv[1], kv[0])),
+        columns=["category", "count"],
+    )
+    # "muted" gives 10 distinguishable colors; fall back to "colorblind" if the
+    # data ever needs more.
+    palette = CAT_PALETTE if len(df) <= len(CAT_PALETTE) else sns.color_palette("colorblind", as_cmap=False)
+    fig, ax = plt.subplots(figsize=(7.6, max(3.4, 0.42 * len(df) + 1.6)))
+    sns.barplot(
+        data=df, x="count", y="category", hue="category",
+        palette=list(palette)[: len(df)], legend=False, ax=ax,
+    )
+    ax.set_title("Problems by category", fontsize=13, fontweight="bold", loc="left", pad=12)
+    ax.set_xlabel("Number of reports")
+    ax.set_ylabel("")
+    ax.xaxis.grid(True, alpha=0.55)
+    ax.set_axisbelow(True)
+    sns.despine(left=False)
+    muted = THEMES.get(theme, THEMES["light"])["muted"]
+    # label each bar at its own end (position-independent, handles any axis order)
+    for patch, v in zip(ax.containers[0].patches, df["count"]):
+        ax.text(patch.get_width() + max(df["count"]) * 0.02,
+                patch.get_y() + patch.get_height() / 2, f"{int(v):,}",
+                va="center", ha="left", fontsize=9.5, color=muted)
+    return _render_png(fig)
+
+
+def _chart_status(problems: list[Problem], theme: str) -> bytes:
+    """Donut of status shares — proportions of a small fixed set, rendered with
+    matplotlib's pie (seaborn has no pie); colors match the UI status badges."""
+    c = _apply_theme(theme)
+    if not problems:
+        fig, ax = plt.subplots(figsize=(5.6, 4.6))
+        ax.text(0.5, 0.5, "No problems yet", ha="center", va="center", fontsize=12, color=c["muted"])
+        ax.axis("off")
+        return _render_png(fig)
+    colors = _status_palette(theme)
+    counts = Counter((p.status or "open").replace("_", " ") for p in problems)
+    order = [s for s in ["open", "in review", "assigned", "resolved"] if s in counts]
+    values = [counts[k] for k in order]
+    total = sum(values) or 1
+    surface = "#131a29" if theme == "dark" else "#ffffff"
+    fig, ax = plt.subplots(figsize=(5.6, 4.6))
+    wedges, _ = ax.pie(
+        values,
+        colors=[colors[k.replace(" ", "_")] for k in order],
+        startangle=90,
+        counterclock=False,
+        wedgeprops=dict(width=0.42, edgecolor=surface, linewidth=2),
+    )
+    for wedge, v in zip(wedges, values):
+        ang = (wedge.theta2 + wedge.theta1) / 2
+        x, y = 0.79 * np.cos(np.deg2rad(ang)), 0.79 * np.sin(np.deg2rad(ang))
+        ax.text(x, y, f"{v / total:.0%}", ha="center", va="center",
+                fontsize=10.5, fontweight="bold", color="white")
+    ax.set_title("Problems by status", fontsize=13, fontweight="bold", loc="left", pad=12)
+    ax.text(0, 0.10, f"{total:,}", ha="center", va="center", fontsize=28, fontweight="bold")
+    ax.text(0, -0.20, "total", ha="center", va="center", fontsize=10)
+    ax.legend(
+        wedges, [f"{k}  ({v:,})" for k, v in zip(order, values)],
+        loc="upper center", bbox_to_anchor=(0.5, -0.08), ncol=2, frameon=False,
+    )
+    return _render_png(fig)
+
+
 def _chart_timeline(problems: list[Problem], theme: str) -> bytes:
+    """Growth over time — two categorical series (cumulative vs duplicates),
+    drawn with seaborn lineplot (hue=) over readable time buckets."""
     c = _apply_theme(theme)
     if not problems:
         fig, ax = plt.subplots(figsize=(7.4, 4.1))
@@ -276,19 +324,37 @@ def _chart_timeline(problems: list[Problem], theme: str) -> bytes:
         unit = "daily"
     else:
         unit = "weekly"
-    fig, ax = plt.subplots(figsize=(7.4, 4.1))
-    ax.fill_between(range(len(buckets)), cum_total, color=CHART_PALETTE[0], alpha=0.18)
-    ax.plot(range(len(buckets)), cum_total, color=CHART_PALETTE[0], marker="o", markersize=5, linewidth=2.2, label="Cumulative problems")
-    ax.plot(range(len(buckets)), cum_dup, color=CHART_PALETTE[2], marker="s", markersize=4.5, linewidth=2.2, label="Duplicates caught")
-    ax.set_xticks(range(len(buckets)))
-    ax.set_xticklabels(labels, rotation=35, ha="right", fontsize=9.5)
-    ax.set_title(f"Growth over time ({unit})", fontsize=14, fontweight="bold", loc="left", pad=12)
-    ax.set_ylabel("Count")
+
+    long_df = pd.DataFrame(
+        {
+            "period": labels + labels,
+            "series": ["Cumulative problems"] * len(labels) + ["Duplicates caught"] * len(labels),
+            "count": cum_total + cum_dup,
+        }
+    )
+    palette = SERIES_COLORS_DARK if theme == "dark" else SERIES_COLORS_LIGHT
+
+    fig, ax = plt.subplots(figsize=(7.6, 4.2))
+    # subtle area fill under the cumulative line (annotation, matplotlib)
+    ax.fill_between(range(len(labels)), cum_total, color=palette["Cumulative problems"], alpha=0.12, zorder=1)
+    sns.lineplot(
+        data=long_df, x="period", y="count", hue="series", style="series",
+        palette=list(palette.values()),
+        markers=True, linewidth=2.2, markersize=4.5, errorbar=None, ax=ax,
+    )
+    ax.set_title(f"Growth over time ({unit})", fontsize=13, fontweight="bold", loc="left", pad=12)
+    ax.set_xlabel("Period")
+    ax.set_ylabel("Number of problems")
+    ax.set_xticks(range(len(labels)))
+    ax.set_xticklabels(labels, rotation=35, ha="right")
     ax.set_ylim(bottom=0)
-    ax.yaxis.grid(True, alpha=0.5)
+    ax.yaxis.grid(True, alpha=0.55)
     ax.set_axisbelow(True)
     sns.despine(left=False)
-    ax.legend(frameon=False, fontsize=10, loc="upper left")
+    leg = ax.get_legend()
+    if leg is not None:
+        leg.set_frame_on(False)
+        leg.set_title(None)
     return _render_png(fig)
 
 

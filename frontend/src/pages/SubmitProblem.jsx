@@ -2,13 +2,14 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api.js'
 import { ErrorNote, LocationButton, ScoreBar } from '../components/ui.jsx'
+import { IconAlert, IconBack, IconBox, IconCheck, IconCheckCircle, IconClock, IconCpu, IconEdit, IconFileText, IconGraduationCap, IconLayers, IconMapPin, IconRefresh } from '../components/icons.jsx'
 
 const PIPELINE_STEPS = [
-  { icon: '📝', label: 'NLP preprocessing', detail: 'tokenize · stop-words · normalize' },
-  { icon: '🧠', label: 'Semantic embedding', detail: 'sentence-transformers 384-d vector' },
-  { icon: '🔁', label: 'Duplicate detection', detail: 'cosine vs all reports, tuned threshold' },
-  { icon: '📦', label: 'Clustering', detail: 'K-Means with auto k (silhouette)' },
-  { icon: '🎓', label: 'Team matching', detail: 'skills + interests + experience' }
+  { icon: IconEdit, label: 'NLP preprocessing', detail: 'tokenize · stop-words · normalize' },
+  { icon: IconCpu, label: 'Semantic embedding', detail: 'sentence-transformers 384-d vector' },
+  { icon: IconRefresh, label: 'Duplicate detection', detail: 'cosine vs all reports, tuned threshold' },
+  { icon: IconLayers, label: 'Clustering', detail: 'K-Means with auto k (silhouette)' },
+  { icon: IconGraduationCap, label: 'Team matching', detail: 'skills + interests + experience' }
 ]
 
 export default function SubmitProblem() {
@@ -52,19 +53,19 @@ export default function SubmitProblem() {
     return (
       <div>
         <div className="page-head">
-          <h1>Problem submitted ✓</h1>
-          <Link to="/dashboard" className="btn btn-ghost">← Back to my problems</Link>
+          <h1>Problem submitted</h1>
+          <Link to="/dashboard" className="btn btn-ghost"><IconBack size={14} /> Back to my problems</Link>
         </div>
 
         {a.duplicate ? (
           <div className="note note-warn">
-            ⚠️ <b>Looks like a duplicate.</b> Very similar to
+            <IconAlert size={16} /> <b>Looks like a duplicate.</b> Very similar to
             {' '}&ldquo;{a.duplicate.title}&rdquo;
             (similarity {(a.duplicate.score ?? 0).toFixed(2)}). It is stored and an admin can review it.
           </div>
         ) : (
           <div className="note note-ok">
-            ✅ No duplicate found — stored as a <b>unique</b> problem.
+            <IconCheckCircle size={16} /> No duplicate found — stored as a <b>unique</b> problem.
           </div>
         )}
 
@@ -73,21 +74,21 @@ export default function SubmitProblem() {
             <h3>Your problem #{p.id}</h3>
             <p className="card-text">{p.description}</p>
             <div className="card-meta">
-              <span>🗂 {p.category}</span>
-              <span>🕒 {new Date(p.created_at).toLocaleDateString()}</span>
+              <span className="meta-item"><IconFileText size={14} /> {p.category}</span>
+              <span className="meta-item"><IconClock size={14} /> {new Date(p.created_at).toLocaleDateString()}</span>
             </div>
             {p.location && (
               <div className="loc-block">
                 <div>
-                  <div className="loc-label">📍 Reported location</div>
+                  <div className="loc-label"><IconMapPin size={14} /> Reported location</div>
                   <div className="loc-text">{p.location}</div>
                 </div>
                 <LocationButton location={p.location} />
               </div>
             )}
-            {p.cluster && <div className="note note-info">📦 Clustered into <b>{p.cluster}</b></div>}
+            {p.cluster && <div className="note note-info"><IconBox size={15} /> Clustered into <b>{p.cluster}</b></div>}
             <Link to={`/problem/${p.id}`} className="btn btn-primary btn-sm">
-              View full AI analysis →
+              View full AI analysis
             </Link>
           </div>
 
@@ -168,7 +169,7 @@ export default function SubmitProblem() {
           <h3>AI pipeline running…</h3>
           {PIPELINE_STEPS.map((s, i) => (
             <div className={`pipeline-step ${i < step ? 'done' : i === step ? 'active' : ''}`} key={s.label}>
-              <span className="step-icon">{i < step ? '✓' : s.icon}</span>
+              <span className="step-icon" aria-hidden="true">{i < step ? <IconCheck size={16} /> : <s.icon size={16} />}</span>
               <div>
                 <b>{s.label}</b>
                 <div className="muted small">{s.detail}</div>

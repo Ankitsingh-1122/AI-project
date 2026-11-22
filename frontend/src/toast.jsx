@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useState } from 'react'
+import { IconCheckCircle, IconAlert } from './components/icons.jsx'
 
 const ToastCtx = createContext(null)
 
@@ -17,7 +18,8 @@ export function ToastProvider({ children }) {
       <div className="toast-wrap">
         {toasts.map((t) => (
           <div key={t.id} className={`toast toast-${t.tone}`}>
-            {t.message}
+            <span aria-hidden="true">{t.tone === 'error' ? <IconAlert size={16} /> : <IconCheckCircle size={16} />}</span>
+            <span>{t.message}</span>
           </div>
         ))}
       </div>

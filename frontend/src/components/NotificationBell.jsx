@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { api } from '../api.js'
 import { useAuth } from '../auth.jsx'
+import { IconBell, IconBellOff, IconCheck, IconLink, IconLogout, IconMessage } from './icons.jsx'
 
 /*
  * Notification bell (top-right, after the light/dark toggle).
@@ -11,9 +12,9 @@ import { useAuth } from '../auth.jsx'
  */
 
 const TYPE_META = {
-  message: { icon: '💬', label: 'Message' },
-  team_deleted: { icon: '🚪', label: 'Team update' },
-  match_decision: { icon: '🤝', label: 'Decision' },
+  message: { icon: IconMessage, label: 'Message' },
+  team_deleted: { icon: IconLogout, label: 'Team update' },
+  match_decision: { icon: IconLink, label: 'Decision' },
 }
 
 function timeAgo(iso) {
@@ -144,7 +145,7 @@ export default function NotificationBell() {
         aria-haspopup="true"
         aria-expanded={open}
       >
-        <span className="notif-bell-icon" aria-hidden="true">🔔</span>
+        <span className="notif-bell-icon" aria-hidden="true"><IconBell size={18} /></span>
         {unread > 0 && <span className="notif-badge">{unread > 9 ? '9+' : unread}</span>}
       </button>
 
@@ -155,17 +156,17 @@ export default function NotificationBell() {
               <b>Notifications</b>
               {unread > 0 && (
                 <button className="notif-markall" onClick={markAll}>
-                  Mark all read
+                  <IconCheck size={13} /> Mark all read
                 </button>
               )}
             </div>
             <div className="notif-list">
               {items === null && <div className="notif-empty">Loading…</div>}
               {items?.length === 0 && (
-                <div className="notif-empty">🔕 You&apos;re all caught up.</div>
+                <div className="notif-empty"><IconBellOff size={16} /> You&apos;re all caught up.</div>
               )}
               {items?.map((n) => {
-                const meta = TYPE_META[n.type] || { icon: '🔔', label: 'Notice' }
+                const meta = TYPE_META[n.type] || { icon: IconBell, label: 'Notice' }
                 return (
                   <div
                     key={n.id}
@@ -175,7 +176,7 @@ export default function NotificationBell() {
                     tabIndex={0}
                     onKeyDown={(e) => e.key === 'Enter' && !n.is_read && markRead(n.id)}
                   >
-                    <span className="notif-ico" aria-hidden="true">{meta.icon}</span>
+                    <span className="notif-ico" aria-hidden="true"><meta.icon size={16} /></span>
                     <span className="notif-body">
                       <span className="notif-title">
                         {n.title}
