@@ -3,7 +3,7 @@ import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-do
 import { useAuth } from '../auth.jsx'
 import NotificationBell from './NotificationBell.jsx'
 import TextSize from './TextSize.jsx'
-import { IconBack, IconChart, IconClipboard, IconEdit, IconHome, IconLogout, IconTarget, IconUser, IconUsers } from './icons.jsx'
+import { IconBack, IconChart, IconClipboard, IconEdit, IconHome, IconLogout, IconMenu, IconTarget, IconUser, IconUsers, IconX } from './icons.jsx'
 
 function initials(name = '') {
   const parts = name.trim().split(/\s+/).filter(Boolean)
@@ -14,10 +14,7 @@ function initials(name = '') {
 /* Pages people land on after logging in: no "Back" button needed there. */
 const HOME_PATHS = ['/dashboard', '/team', '/admin']
 
-/*
- * Is there a previous page inside the app to go back to?
- * (react-router v6 keeps its history index in window.history.state.idx.)
- */
+/* Is there a previous page inside the app to go back to? */
 function useCanGoBack() {
   const location = useLocation()
   const [idx, setIdx] = useState(() => window.history.state?.idx ?? 0)
@@ -27,10 +24,7 @@ function useCanGoBack() {
   return idx > 0
 }
 
-/*
- * One simple menu per role, in plain words. Every item has an icon AND a
- * text label — icons alone are easy to misread.
- */
+/* One simple menu per role, in plain words. Icon AND text on every item. */
 function navItemsFor(user) {
   const items = []
   const isCitizen = user.role === 'citizen'
@@ -56,14 +50,29 @@ export default function Layout() {
   const navigate = useNavigate()
   const location = useLocation()
   const canBack = useCanGoBack()
+  const [drawer, setDrawer] = useState(false)
 
-  // New page → start at the top.
+  // New page: close the phone menu and start at the top.
   useEffect(() => {
+    setDrawer(false)
     window.scrollTo(0, 0)
   }, [location.pathname])
 
+  useEffect(() => {
+    document.body.style.overflow = drawer ? 'hidden' : ''
+    return () => { document.body.style.overflow = '' }
+  }, [drawer])
+
+  useEffect(() => {
+    if (!drawer) return
+    const onKey = (e) => { if (e.key === 'Escape') setDrawer(false) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [drawer])
+
   async function onLogout() {
     await logout()
+    setDrawer(false)
     navigate('/')
   }
 
@@ -74,65 +83,76 @@ export default function Layout() {
     <div className="app-shell">
       <a href="#main" className="skip-link">Skip to main content</a>
 
-      <header className="topbar">
-        <div className="topbar-row">
-          <Link to="/" className="topbar-brand" aria-label="CivicAI home">
+      <aside className={'sidebar' + (drawer ? ' open' : '')} aria-label="Main menu">
+        <div className="sidebar-top">
+          <Link to="/" className="sidebar-brand" aria-label="CivicAI home">
             <span className="brand-icon"><img src="/logo-mark.png" alt="" aria-hidden="true" /></span>
-            <span className="brand-text">
-              Civic<span className="grad">AI</span>
-            </span>
+            <span className="brand-name">Civic<span className="grad">AI</span></span>
           </Link>
-
-          <div className="topbar-spacer" />
-
-          <TextSize />
-          <NotificationBell />
-
-          {user && (
-            <>
-              <Link to="/profile" className="user-chip" title="My account">
-                <span className="chip-avatar" aria-hidden="true">{initials(user.name)}</span>
-                <span className="chip-name-wrap">
-                  <span className="user-name">{user.name}</span>
-                </span>
-              </Link>
-              <button className="btn btn-outline logout-btn" onClick={onLogout}>
-                <IconLogout size={18} />
-                <span className="logout-text">Log out</span>
-              </button>
-            </>
-          )}
+          <button className="drawer-close" onClick={() => setDrawer(false)} aria-label="Close menu">
+            <IconX size={22} />
+          </button>
         </div>
 
+        <nav className="side-nav">
+          {items.map((l) => (
+            <NavLink
+              key={l.to}
+              to={l.to}
+              end={l.end}
+              className={({ isActive }) => 'nav-item' + (isActive ? ' active' : '')}
+            >
+              <span className="nav-icon" aria-hidden="true"><l.icon size={22} /></span>
+              <span className="nav-label">{l.label}</span>
+            </NavLink>
+          ))}
+        </nav>
+
         {user && (
-          <nav className="main-nav" aria-label="Main menu">
-            {items.map((l) => (
-              <NavLink
-                key={l.to}
-                to={l.to}
-                end={l.end}
-                className={({ isActive }) => 'main-nav-item' + (isActive ? ' active' : '')}
-              >
-                <span className="main-nav-icon" aria-hidden="true"><l.icon size={22} /></span>
-                <span className="main-nav-label">{l.label}</span>
-              </NavLink>
-            ))}
-          </nav>
+          <div className="sidebar-foot">
+            <Link to="/profile" className="user-card" title="My account">
+              <span className="user-avatar" aria-hidden="true">{initials(user.name)}</span>
+              <span className="user-meta">
+                <span className="user-name">{user.name}</span>
+                <span className={'role role-' + user.role}>{user.role}</span>
+              </span>
+            </Link>
+            <button className="btn btn-outline btn-block" onClick={onLogout}>
+              <IconLogout size={20} /> Log out
+            </button>
+          </div>
         )}
-      </header>
+      </aside>
+      {drawer && <div className="drawer-overlay" onClick={() => setDrawer(false)} aria-hidden="true" />}
 
-      <main className="content" id="main" key={location.pathname}>
-        {showBack && (
-          <button className="back-btn" onClick={() => navigate(-1)}>
-            <IconBack size={20} /> Back
+      <div className="main-col">
+        <header className="app-topbar">
+          <button
+            className="menu-btn"
+            onClick={() => setDrawer(true)}
+            aria-label="Open menu"
+            aria-expanded={drawer}
+          >
+            <IconMenu size={24} /> <span>Menu</span>
           </button>
-        )}
-        <Outlet />
-      </main>
+          <div className="topbar-spacer" />
+          <TextSize />
+          <NotificationBell />
+        </header>
 
-      <footer className="footer">
-        CivicAI · Report a problem in your area and we connect it with a team that can help.
-      </footer>
+        <main className="content" id="main" key={location.pathname}>
+          {showBack && (
+            <button className="back-btn" onClick={() => navigate(-1)}>
+              <IconBack size={20} /> Back
+            </button>
+          )}
+          <Outlet />
+        </main>
+
+        <footer className="footer">
+          CivicAI · Report a problem in your area and we connect it with a team that can help.
+        </footer>
+      </div>
     </div>
   )
 }

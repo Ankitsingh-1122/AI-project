@@ -18,10 +18,10 @@
         var root = document.documentElement;
         root.setAttribute('data-theme', 'light');
         try {
-          var z = localStorage.getItem('civic_text_size');
-          root.setAttribute('data-size', z === 'normal' || z === 'xlarge' ? z : 'large');
+          var z = localStorage.getItem('civic_text_size_v2');
+          root.setAttribute('data-size', z === 'm' || z === 'l' ? z : 's');
         } catch (e) {
-          root.setAttribute('data-size', 'large');
+          root.setAttribute('data-size', 's');
         }
       })();
     </script>

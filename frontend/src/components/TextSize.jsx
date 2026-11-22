@@ -1,16 +1,15 @@
 import { useEffect, useState } from 'react'
 
 /*
- * Text-size control for readers who need bigger letters.
- * Three clear steps — A / A / A — stored on this device and applied to the
- * whole app through <html data-size="…">. Everything is sized in rem, so all
- * text, buttons and spacing grow together.
+ * Text-size control: three clear steps — A / A / A — stored on this device and
+ * applied to the whole app through <html data-size="s|m|l">. Everything is
+ * sized in rem, so text, buttons and spacing all scale together.
  */
-const KEY = 'civic_text_size'
+const KEY = 'civic_text_size_v2'
 const SIZES = [
-  { id: 'normal', label: 'Normal text size' },
-  { id: 'large', label: 'Large text size' },
-  { id: 'xlarge', label: 'Extra large text size' },
+  { id: 's', label: 'Small text' },
+  { id: 'm', label: 'Medium text' },
+  { id: 'l', label: 'Large text' },
 ]
 
 function readSize() {
@@ -20,7 +19,7 @@ function readSize() {
   } catch {
     /* storage unavailable */
   }
-  return 'large' // default: comfortable for everyone
+  return 's'
 }
 
 export default function TextSize() {
