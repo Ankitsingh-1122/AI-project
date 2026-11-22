@@ -46,7 +46,7 @@ export default function TeamDetail() {
               <Link to="/team" className="btn btn-primary btn-sm"><IconEdit size={14} /> Edit team profile</Link>
             )}
             {isOwner && (
-              <Link to="/team/recommended" className="btn btn-outline btn-sm"><IconTarget size={14} /> View recommendations</Link>
+              <Link to="/team/recommended" className="btn btn-outline btn-sm"><IconTarget size={14} /> See suggested problems</Link>
             )}
           </div>
         )}

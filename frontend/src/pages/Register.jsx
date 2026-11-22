@@ -46,15 +46,14 @@ export default function Register() {
           </div>
           <div className="confirm-ico" aria-hidden="true"><IconInbox size={40} /></div>
           <h1>Check your email</h1>
-          <p className="muted" style={{ textAlign: 'center' }}>
-            Your CivicAI account was created on Supabase. We sent a confirmation link to
-            <b> {email}</b> — click it to activate your account, then log in here.
+          <p className="muted center">
+            We sent a message to <b>{email}</b>. Open it and press the link inside to switch on your account. Then come back and log in.
           </p>
           <Link to="/login" className="btn btn-primary btn-block" style={{ marginTop: 16 }}>
-            Back to log in
+            Go to log in
           </Link>
-          <p className="muted center" style={{ fontSize: 12 }}>
-            Didn&apos;t get it? Check spam, or wait a minute and try again.
+          <p className="muted center">
+            Cannot find it? Look in your spam folder, or wait a minute and try again.
           </p>
         </div>
       </div>
@@ -64,40 +63,41 @@ export default function Register() {
   return (
     <div className="auth-page">
       <div className="auth-card">
+        <Link to="/" className="auth-back">← Back to start page</Link>
         <div className="auth-brand">
           <span className="brand-icon"><img src="/logo-mark.png" alt="" aria-hidden="true" /></span>
           <span>Civic<span className="grad">AI</span></span>
         </div>
         <h1>Create your account</h1>
-        <p className="muted">Real accounts on Supabase — citizens report problems · teams solve them</p>
-        <form onSubmit={submit}>
-          <label>Full name
+        <p className="muted">It is free and takes about a minute.</p>
+        <form onSubmit={submit} className="form">
+          <label>Your full name
             <input value={name} onChange={(e) => setName(e.target.value)} required minLength={2} />
           </label>
-          <label>Email
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          <label>Your email
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
           </label>
-          <label>Password
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
+          <label>Choose a password <span className="hint">(at least 6 letters or numbers)</span>
+            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} autoComplete="new-password" />
           </label>
-          <label>I am a…
+          <label>I want to…
             <Select
               className="auth-select"
               value={role}
               onChange={setRole}
               options={[
-                { value: 'citizen', label: 'Citizen (report problems)' },
-                { value: 'team', label: 'Student team (solve problems)' },
+                { value: 'citizen', label: 'Report problems in my area' },
+                { value: 'team', label: 'Help solve problems (student team)' },
               ]}
             />
           </label>
-          {error && <div className="note note-error">{error}</div>}
-          <button className="btn btn-primary btn-block" disabled={busy}>
-            {busy ? 'Creating…' : 'Create account'}
+          {error && <div className="note note-error" role="alert">{error}</div>}
+          <button className="btn btn-primary btn-lg btn-block" disabled={busy}>
+            {busy ? 'Creating your account…' : 'Create my account'}
           </button>
         </form>
         <p className="muted center">
-          Already registered? <Link to="/login">Log in</Link>
+          Already have an account? <Link to="/login">Log in</Link>
         </p>
       </div>
     </div>

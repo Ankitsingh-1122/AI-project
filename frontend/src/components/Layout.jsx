@@ -1,10 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth.jsx'
-import { useTheme } from '../theme.jsx'
 import NotificationBell from './NotificationBell.jsx'
-import { IconBack, IconChart, IconClipboard, IconEdit, IconFwd, IconHome, IconLogout, IconMoon, IconSun, IconTarget, IconUser, IconUsers } from './icons.jsx'
-
+import TextSize from './TextSize.jsx'
+import { IconBack, IconChart, IconClipboard, IconEdit, IconHome, IconLogout, IconTarget, IconUser, IconUsers } from './icons.jsx'
 
 function initials(name = '') {
   const parts = name.trim().split(/\s+/).filter(Boolean)
@@ -12,222 +11,128 @@ function initials(name = '') {
   return (parts[0][0] + (parts[1]?.[0] || '')).toUpperCase()
 }
 
+/* Pages people land on after logging in: no "Back" button needed there. */
+const HOME_PATHS = ['/dashboard', '/team', '/admin']
+
 /*
- * Browser-history aware Back/Forward built on react-router's navigate().
- * NOTE: the history index lives in window.history.state.idx — react-router
- * v6 keeps user state separately (location.state is the `usr` payload).
+ * Is there a previous page inside the app to go back to?
+ * (react-router v6 keeps its history index in window.history.state.idx.)
  */
-function useBrowserNav() {
-  const navigate = useNavigate()
+function useCanGoBack() {
   const location = useLocation()
   const [idx, setIdx] = useState(() => window.history.state?.idx ?? 0)
   useEffect(() => {
     setIdx(window.history.state?.idx ?? 0)
   }, [location.key])
-  const maxIdx = useRef(window.history.state?.idx ?? 0)
-  useEffect(() => {
-    if (idx >= maxIdx.current) maxIdx.current = idx
-  }, [idx])
-  return {
-    canBack: idx > 0,
-    canFwd: idx < maxIdx.current,
-    back: () => navigate(-1),
-    fwd: () => navigate(1),
-  }
+  return idx > 0
 }
 
-function navGroupsFor(user) {
-  const groups = []
-  if (user.role === 'citizen' || user.role === 'admin') {
-    groups.push({
-      label: user.role === 'admin' ? 'Citizen' : '',
-      items: [
-        { to: '/dashboard', label: 'My Problems', icon: IconClipboard },
-        { to: '/submit', label: 'Submit Problem', icon: IconEdit },
-        // citizens can browse (but not edit) team profiles
-        ...(user.role === 'citizen' ? [{ to: '/teams', label: 'Teams Directory', icon: IconUsers }] : []),
-      ],
-    })
-  }
-  if (user.role === 'team' || user.role === 'admin') {
-    groups.push({
-      label: user.role === 'admin' ? 'Team' : '',
-      items: [
-        { to: '/team', label: 'Team Home', icon: IconHome, end: true },
-        { to: '/team/recommended', label: 'Recommended', icon: IconTarget },
-        { to: '/teams', label: 'Teams Directory', icon: IconUsers },
-      ],
-    })
-  }
-  if (user.role === 'admin') {
-    groups.push({
-      label: 'Admin',
-      items: [{ to: '/admin', label: 'Admin Dashboard', icon: IconChart }],
-    })
-  }
-  groups.push({
-    label: user.role === 'admin' ? 'Account' : '',
-    items: [{ to: '/profile', label: 'My Profile', icon: IconUser, end: true }],
-  })
-  return groups
-}
+/*
+ * One simple menu per role, in plain words. Every item has an icon AND a
+ * text label — icons alone are easy to misread.
+ */
+function navItemsFor(user) {
+  const items = []
+  const isCitizen = user.role === 'citizen'
+  const isTeam = user.role === 'team'
+  const isAdmin = user.role === 'admin'
 
-function ThemeButton() {
-  const { theme, toggle } = useTheme()
-  return (
-    <button className="theme-btn" onClick={toggle} aria-label="Toggle light / dark mode" title="Toggle light / dark mode">
-      <span className="theme-icon" aria-hidden="true">
-        {theme === 'dark' ? <IconSun size={18} /> : <IconMoon size={18} />}
-      </span>
-    </button>
-  )
+  if (isAdmin) items.push({ to: '/admin', label: 'Admin', icon: IconChart })
+  if (isCitizen || isAdmin) {
+    items.push({ to: '/dashboard', label: 'My Reports', icon: IconClipboard })
+    items.push({ to: '/submit', label: 'Report a Problem', icon: IconEdit })
+  }
+  if (isTeam || isAdmin) {
+    items.push({ to: '/team', label: 'My Team', icon: IconHome, end: true })
+    items.push({ to: '/team/recommended', label: 'Suggested Problems', icon: IconTarget })
+  }
+  items.push({ to: '/teams', label: 'All Teams', icon: IconUsers })
+  items.push({ to: '/profile', label: 'My Account', icon: IconUser, end: true })
+  return items
 }
 
 export default function Layout() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const [drawer, setDrawer] = useState(false)
-  const nav = useBrowserNav()
+  const canBack = useCanGoBack()
 
-  useEffect(() => setDrawer(false), [location.pathname])
-
+  // New page → start at the top.
   useEffect(() => {
-    document.body.style.overflow = drawer ? 'hidden' : ''
-    return () => { document.body.style.overflow = '' }
-  }, [drawer])
-
-  useEffect(() => {
-    if (!drawer) return
-    const onKey = (e) => { if (e.key === 'Escape') setDrawer(false) }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [drawer])
+    window.scrollTo(0, 0)
+  }, [location.pathname])
 
   async function onLogout() {
     await logout()
-    setDrawer(false)
     navigate('/')
   }
 
-  const groups = user ? navGroupsFor(user) : []
-  const av = user ? initials(user.name) : '?'
-
-  const sidebarInner = (
-    <>
-      <Link to={user ? '/' : '/'} className="sidebar-brand" onClick={() => setDrawer(false)}>
-        <span className="brand-icon"><img src="/logo-mark.png" alt="" aria-hidden="true" /></span>
-        <span className="brand-name">
-          Civic<span className="grad">AI</span>
-        </span>
-      </Link>
-
-      <nav className="side-nav">
-        {groups.map((g, gi) => (
-          <div className="nav-group" key={g.label || gi}>
-            {g.label && <div className="nav-section">{g.label}</div>}
-            {g.items.map((l) => (
-              <NavLink
-                key={l.to}
-                to={l.to}
-                end={l.end}
-                onClick={() => setDrawer(false)}
-                className={({ isActive }) => 'nav-item' + (isActive ? ' active' : '')}
-              >
-                <span className="nav-icon" aria-hidden="true">{l.icon ? <l.icon size={18} /> : null}</span>
-                <span className="nav-label">{l.label}</span>
-              </NavLink>
-            ))}
-          </div>
-        ))}
-      </nav>
-
-      <div className="sidebar-foot">
-        {user && (
-          <Link to="/profile" className="user-card" onClick={() => setDrawer(false)} title="View my profile">
-            <span className="user-avatar">{av}</span>
-            <span className="user-meta">
-              <span className="user-name">{user.name}</span>
-              <span className={'role role-' + user.role}>{user.role}</span>
-            </span>
-          </Link>
-        )}
-        {user && (
-          <button className="btn btn-ghost btn-block" onClick={onLogout}>
-            <IconLogout size={15} /> Log out
-          </button>
-        )}
-      </div>
-    </>
-  )
+  const items = user ? navItemsFor(user) : []
+  const showBack = canBack && !HOME_PATHS.includes(location.pathname)
 
   return (
     <div className="app-shell">
-      <aside className={'sidebar' + (drawer ? ' open' : '')} aria-label="Main navigation">
-        {sidebarInner}
-      </aside>
-      {drawer && <div className="drawer-overlay" onClick={() => setDrawer(false)} aria-hidden="true" />}
+      <a href="#main" className="skip-link">Skip to main content</a>
 
-      <div className="main-col">
-        <header className="topbar">
-          <div className="topbar-left">
-            <button
-              className={'hamburger' + (drawer ? ' active' : '')}
-              aria-label={drawer ? 'Close menu' : 'Open menu'}
-              aria-expanded={drawer}
-              onClick={() => setDrawer((d) => !d)}
-            >
-              <span /><span /><span />
-            </button>
-            <div className="nav-btn-group">
-              <button
-                className="icon-btn"
-                onClick={nav.back}
-                disabled={!nav.canBack}
-                aria-label="Go back"
-                title="Back"
-              >
-                <IconBack />
-              </button>
-              <button
-                className="icon-btn"
-                onClick={nav.fwd}
-                disabled={!nav.canFwd}
-                aria-label="Go forward"
-                title="Forward"
-              >
-                <IconFwd />
-              </button>
-            </div>
-          </div>
-          <Link to="/" className="topbar-brand">
+      <header className="topbar">
+        <div className="topbar-row">
+          <Link to="/" className="topbar-brand" aria-label="CivicAI home">
             <span className="brand-icon"><img src="/logo-mark.png" alt="" aria-hidden="true" /></span>
             <span className="brand-text">
               Civic<span className="grad">AI</span>
             </span>
           </Link>
+
           <div className="topbar-spacer" />
-          {user && (
-            <Link to="/profile" className="user-chip" title="View my profile">
-              <span className="chip-avatar">{av}</span>
-              <span className="chip-name-wrap">
-                <span className="user-name">{user.name}</span>{' '}
-                <span className={'role role-' + user.role}>{user.role}</span>
-              </span>
-            </Link>
-          )}
-          <ThemeButton />
+
+          <TextSize />
           <NotificationBell />
-        </header>
 
-        <main className="content" key={location.pathname}>
-          <Outlet />
-        </main>
+          {user && (
+            <>
+              <Link to="/profile" className="user-chip" title="My account">
+                <span className="chip-avatar" aria-hidden="true">{initials(user.name)}</span>
+                <span className="chip-name-wrap">
+                  <span className="user-name">{user.name}</span>
+                </span>
+              </Link>
+              <button className="btn btn-outline logout-btn" onClick={onLogout}>
+                <IconLogout size={18} />
+                <span className="logout-text">Log out</span>
+              </button>
+            </>
+          )}
+        </div>
 
-        <footer className="footer">
-          CivicAI · AI-powered citizen problem deduplication, clustering &amp; student-team matching
-        </footer>
-      </div>
+        {user && (
+          <nav className="main-nav" aria-label="Main menu">
+            {items.map((l) => (
+              <NavLink
+                key={l.to}
+                to={l.to}
+                end={l.end}
+                className={({ isActive }) => 'main-nav-item' + (isActive ? ' active' : '')}
+              >
+                <span className="main-nav-icon" aria-hidden="true"><l.icon size={22} /></span>
+                <span className="main-nav-label">{l.label}</span>
+              </NavLink>
+            ))}
+          </nav>
+        )}
+      </header>
+
+      <main className="content" id="main" key={location.pathname}>
+        {showBack && (
+          <button className="back-btn" onClick={() => navigate(-1)}>
+            <IconBack size={20} /> Back
+          </button>
+        )}
+        <Outlet />
+      </main>
+
+      <footer className="footer">
+        CivicAI · Report a problem in your area and we connect it with a team that can help.
+      </footer>
     </div>
   )
 }

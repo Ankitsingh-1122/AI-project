@@ -2,16 +2,9 @@ import { createContext, useCallback, useContext, useEffect, useState } from 'rea
 
 const ThemeCtx = createContext({ theme: 'light', toggle: () => {} })
 
+/* The app is always light: bright, high-contrast and the same for everyone.
+   (The dark palette stays in the CSS but is no longer switched on.) */
 function getInitialTheme() {
-  try {
-    const stored = window.localStorage.getItem('civic_theme')
-    if (stored === 'light' || stored === 'dark') return stored
-  } catch {
-    /* storage unavailable */
-  }
-  if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-    return 'dark'
-  }
   return 'light'
 }
 

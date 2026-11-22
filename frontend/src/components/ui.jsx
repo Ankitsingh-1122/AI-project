@@ -8,7 +8,7 @@ import { Link } from 'react-router-dom'
  * theme in some browsers (white popup + light text = invisible options),
  * so filters/status pickers use this fully-styled component instead.
  */
-export function Select({ value, onChange, options, className = '', placeholder = 'Select…' }) {
+export function Select({ value, onChange, options, className = '', placeholder = 'Choose…' }) {
   const [open, setOpen] = useState(false)
   const [menu, setMenu] = useState(null) // viewport coordinates (fixed positioning)
   const wrapRef = useRef(null)
@@ -123,7 +123,7 @@ export function StatCard({ label, value, sub, tone = 'blue', icon, to, title }) 
         {icon && <span className="stat-icon">{icon}</span>}
       </div>
       {sub && <span className="stat-sub">{sub}</span>}
-      {to && <span className="stat-cta" aria-hidden="true">View →</span>}
+      {to && <span className="stat-cta" aria-hidden="true">Open →</span>}
     </>
   )
   if (!to) {
@@ -140,6 +140,17 @@ export function Badge({ tone = 'gray', className = '', children }) {
   return <span className={('badge badge-' + tone + ' ' + className).trim()}>{children}</span>
 }
 
+/* Plain-language status names (the stored values stay unchanged). */
+const STATUS_LABELS = {
+  open: 'New',
+  in_review: 'Being reviewed',
+  assigned: 'Team assigned',
+  resolved: 'Solved',
+}
+export function statusLabel(status) {
+  return STATUS_LABELS[status] || String(status || '').replace(/_/g, ' ')
+}
+
 export function statusTone(status) {
   return {
     open: 'blue',
@@ -153,15 +164,15 @@ export function DuplicateBadge({ p }) {
   if (p.is_duplicate) {
     const pct = p.duplicate_score != null ? Math.round(p.duplicate_score * 100) : null
     return (
-      <span className="badge badge-red" title="Flagged as a probable duplicate by the trained classifier">
-        <IconAlert size={13} /> Duplicate{pct != null ? ` · ${pct}%` : ''}
+      <span className="badge badge-red" title="This looks the same as a problem that was already reported">
+        <IconAlert size={15} /> Already reported{pct != null ? ` · ${pct}%` : ''}
       </span>
     )
   }
-  if (p.duplicate_score != null && p.duplicate_score > 0) {
+  if (p.duplicate_score != null && p.duplicate_score >= 0.5) {
     return (
-      <span className="badge badge-gray" title="Top similarity score vs existing problems (not flagged)">
-        ≈ {Math.round(p.duplicate_score * 100)}% similar
+      <span className="badge badge-gray" title={`Similar to an existing report (${Math.round(p.duplicate_score * 100)}% alike) — not flagged as a copy`}>
+        Similar report exists
       </span>
     )
   }
@@ -184,7 +195,7 @@ export function ScoreBar({ value, score, label }) {
  * (Google Maps search) so the citizen sees the actual place. Rendered only
  * when a location exists — never a fake button.
  */
-export function LocationButton({ location, small = false, label = 'View Live Location' }) {
+export function LocationButton({ location, small = false, label = 'Show on map' }) {
   if (!location) return null
   const q = encodeURIComponent(location)
   const url = `https://www.google.com/maps/search/?api=1&query=${q}`

@@ -59,10 +59,10 @@ export default function TeamsDirectory() {
   return (
     <div>
       <div className="page-head">
-        <h1>Student teams</h1>
+        <h1>All Teams</h1>
         <input
           className="search-input"
-          placeholder="Search by skill or interest…"
+          placeholder="Search teams by skill or interest"
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />

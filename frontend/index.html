@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>CivicAI — Citizen Problem Platform</title>
     <meta name="description" content="CivicAI — an AI-assisted platform for citizens to report civic problems, get smart duplicates clustering, and connect to the right response teams." />
-    <meta name="theme-color" content="#4f46e5" />
+    <meta name="theme-color" content="#3f37c9" />
     <!-- favicons: C emblem (transparent), all sizes -->
     <link rel="icon" href="/favicon.ico" sizes="any" />
     <link rel="icon" type="image/png" sizes="16x16" href="/icon-16.png" />
@@ -13,16 +13,15 @@
     <link rel="icon" type="image/png" sizes="48x48" href="/icon-48.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/icon-180.png" />
     <script>
-      /* Apply saved theme before first paint (no flash of wrong theme). */
+      /* Apply theme + saved text size before first paint (no flash of small text). */
       (function () {
+        var root = document.documentElement;
+        root.setAttribute('data-theme', 'light');
         try {
-          var t = localStorage.getItem('civic_theme');
-          if (t !== 'light' && t !== 'dark') {
-            t = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-          }
-          document.documentElement.setAttribute('data-theme', t);
+          var z = localStorage.getItem('civic_text_size');
+          root.setAttribute('data-size', z === 'normal' || z === 'xlarge' ? z : 'large');
         } catch (e) {
-          document.documentElement.setAttribute('data-theme', 'light');
+          root.setAttribute('data-size', 'large');
         }
       })();
     </script>

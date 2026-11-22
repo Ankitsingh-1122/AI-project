@@ -96,7 +96,7 @@ export default function TeamDashboard() {
       } else {
         await api('/api/teams', { method: 'POST', body })
       }
-      toast.push('Team profile saved — matching now uses the new skills & interests')
+      toast.push('Saved. Your team details are up to date.')
       await load()
     } catch (err) {
       if (err.status !== 401) setError(err.message)
@@ -118,8 +118,8 @@ export default function TeamDashboard() {
   return (
     <div>
       <div className="page-head">
-        <h1>Team profile</h1>
-        <Link to="/team/recommended" className="btn btn-outline">View recommendations <IconChevronRight size={14} /></Link>
+        <h1>My Team</h1>
+        <Link to="/team/recommended" className="btn btn-primary btn-lg">See suggested problems <IconChevronRight size={20} /></Link>
       </div>
 
       <ErrorNote>{error}</ErrorNote>
@@ -145,9 +145,8 @@ export default function TeamDashboard() {
 
       {!team && (
         <div className="note note-info">
-          Register your team below. The AI builds your team’s embedding from
-          <b> name + description + skills + interests + experience</b>, then matches problems
-          against it.
+          Fill in your team’s details below and press “Register team”. We use your team name, what you do,
+          your skills and interests to suggest problems that suit you.
         </div>
       )}
 
@@ -157,85 +156,85 @@ export default function TeamDashboard() {
             <label>Team name
               <input value={form.team_name} onChange={(e) => set('team_name', e.target.value)} required minLength={2} />
             </label>
-            <label>Experience / past projects
+            <label>Past projects <span className="hint">What has your team done before?</span>
               <input value={form.experience} onChange={(e) => set('experience', e.target.value)}
                 placeholder="e.g. Built a street light monitoring app last year" />
             </label>
           </div>
-          <label>Description
+          <label>About your team
             <textarea rows={3} value={form.description} onChange={(e) => set('description', e.target.value)}
               placeholder="What does your team do?" />
           </label>
-          <label>Technical skills (comma-separated)
+          <label>Your skills <span className="hint">Separate with commas</span>
             <input value={form.skills} onChange={(e) => set('skills', e.target.value)}
               placeholder="python, computer vision, iot, data analysis" />
           </label>
-          <label>Areas of interest (comma-separated)
+          <label>Problems you like to work on <span className="hint">Separate with commas</span>
             <input value={form.interests} onChange={(e) => set('interests', e.target.value)}
               placeholder="street lights, potholes, water supply" />
           </label>
 
-          <h3>
-            Members{' '}
+          <h2>
+            Team members{' '}
             <span className={'member-count' + (form.members.length >= MAX_TEAM_MEMBERS ? ' at-cap' : '')}>
               {form.members.length}/{MAX_TEAM_MEMBERS}
             </span>
-          </h3>
-          <p className="muted small member-cap-note">
-            A team can have at most {MAX_TEAM_MEMBERS} members — pick your core squad.
+          </h2>
+          <p className="muted member-cap-note">
+            A team can have up to {MAX_TEAM_MEMBERS} members.
           </p>
           {form.members.map((m, i) => (
             <div className="member-row" key={i}>
-              <input value={m.name} onChange={(e) => setMember(i, 'name', e.target.value)} placeholder="Member name" />
-              <input value={m.role} onChange={(e) => setMember(i, 'role', e.target.value)} placeholder="role" className="role-input" />
+              <input value={m.name} onChange={(e) => setMember(i, 'name', e.target.value)} placeholder="Name" aria-label="Member name" />
+              <input value={m.role} onChange={(e) => setMember(i, 'role', e.target.value)} placeholder="Role" aria-label="Member role" className="role-input" />
               {form.members.length > 1 && (
-                <button type="button" className="btn btn-ghost btn-sm" onClick={() => removeMember(i)} aria-label="Remove member"><IconX size={14} /></button>
+                <button type="button" className="btn btn-outline" onClick={() => removeMember(i)} aria-label="Remove this member"><IconX size={18} /> Remove</button>
               )}
             </div>
           ))}
           <button
             type="button"
-            className="btn btn-ghost btn-sm"
+            className="btn btn-outline"
             onClick={addMember}
             disabled={form.members.length >= MAX_TEAM_MEMBERS}
             title={form.members.length >= MAX_TEAM_MEMBERS ? `Maximum ${MAX_TEAM_MEMBERS} members per team` : 'Add another member'}
           >
-            <IconPlus size={14} /> Add member
+            <IconPlus size={18} /> Add a member
           </button>
           {form.members.length >= MAX_TEAM_MEMBERS && (
-            <p className="muted small" role="note">
-              Maximum of {MAX_TEAM_MEMBERS} members reached — remove someone to add another.
+            <p className="muted" role="note">
+              You have reached {MAX_TEAM_MEMBERS} members. Remove someone to add another.
             </p>
           )}
 
-          <button className="btn btn-primary" disabled={busy}>
-            {busy ? 'Saving…' : team ? 'Update team profile' : 'Register team'}
+          <button className="btn btn-primary btn-lg" disabled={busy}>
+            {busy ? 'Saving…' : team ? 'Save changes' : 'Register team'}
           </button>
         </form>
 
-        <div className="card">
-          <h3>AI sees your team as…</h3>
-          <p className="muted small">
-            This exact text is embedded and compared with every citizen problem:
+        <details className="card tech-details">
+          <summary>How we describe your team (technical)</summary>
+          <p className="muted">
+            This text is compared with every reported problem to find a good fit:
           </p>
           <div className="team-preview">
             {previewText || 'Start typing to see your team profile text…'}
           </div>
           <div className="kw-row" style={{ marginTop: 12 }}>
             {form.skills.split(',').map((s) => s.trim()).filter(Boolean).map((s) => (
-              <span className="kw" key={`s-${s}`}><IconSliders size={12} /> {s}</span>
+              <span className="kw" key={`s-${s}`}><IconSliders size={14} /> {s}</span>
             ))}
             {form.interests.split(',').map((s) => s.trim()).filter(Boolean).map((s) => (
-              <span className="kw kw-interest" key={`i-${s}`}><IconHeart size={12} /> {s}</span>
+              <span className="kw kw-interest" key={`i-${s}`}><IconHeart size={14} /> {s}</span>
             ))}
           </div>
           {team && (
             <div className="card-meta">
-              <span className="meta-item"><IconUsers size={14} /> {team.members.length} members</span>
-              <span className="meta-item"><IconCpu size={14} /> team id: {team.id}</span>
+              <span className="meta-item"><IconUsers size={18} /> {team.members.length} members</span>
+              <span className="meta-item"><IconCpu size={18} /> team id: {team.id}</span>
             </div>
           )}
-        </div>
+        </details>
       </div>
 
       {team && (

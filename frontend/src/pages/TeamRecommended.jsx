@@ -3,8 +3,8 @@ import { Link } from 'react-router-dom'
 import { api } from '../api.js'
 import { useAuth } from '../auth.jsx'
 import { useToast } from '../toast.jsx'
-import { Badge, Empty, ErrorNote, LocationButton, ScoreBar, Spinner } from '../components/ui.jsx'
-import { IconCheck, IconCpu, IconMapPin, IconThumbsDown, IconThumbsUp, IconX } from '../components/icons.jsx'
+import { Badge, Empty, ErrorNote, LocationButton, Spinner } from '../components/ui.jsx'
+import { IconCheck, IconMapPin, IconThumbsDown, IconThumbsUp, IconX } from '../components/icons.jsx'
 
 export default function TeamRecommended() {
   const { user } = useAuth()
@@ -43,8 +43,8 @@ export default function TeamRecommended() {
       const r = await api(`/api/teams/matches/${matchId}/decision`, { method: 'POST', body: { status } })
       toast.push(
         status === 'accept'
-          ? `Problem accepted — status is now “${r.problem_status}”`
-          : 'Recommendation rejected'
+          ? 'Problem accepted — your team is now working on it'
+          : 'Okay — we removed it from your list'
       )
       await load()
     } catch (err) {
@@ -55,9 +55,9 @@ export default function TeamRecommended() {
   async function feedback(matchId, type) {
     try {
       await api('/api/feedback', { method: 'POST', body: { feedback_type: type, match_id: matchId } })
-      toast.push(`Feedback recorded: ${type === 'good_match' ? 'good rec' : 'bad rec'}`)
+      toast.push(type === 'good_match' ? 'Thank you — noted as a good suggestion' : 'Thank you — noted as a poor suggestion')
     } catch (err) {
-      if (err.status !== 401) toast.push(`Feedback error: ${err.message}`, 'error')
+      if (err.status !== 401) toast.push(`Could not send your feedback: ${err.message}`, 'error')
     }
   }
 
@@ -67,13 +67,13 @@ export default function TeamRecommended() {
     return (
       <div>
         <div className="page-head">
-          <h1>Recommended for your team</h1>
+          <h1>Suggested Problems</h1>
         </div>
         <Empty>
           {noTeam
             ? <>This account isn't associated with a team, so there are no team recommendations to show here.{' '}
               {user.role === 'admin'
-                ? <>You can browse every team in the <Link to="/teams">Teams Directory</Link>.</>
+                ? <>You can browse every team in the <Link to="/teams">All Teams page</Link>.</>
                 : <>Once you register a <Link to="/team">team profile</Link>, matching problems will appear here.</>}
             </>
             : <>No recommendations yet. Make sure your <Link to="/team">team profile</Link> is registered
@@ -107,11 +107,15 @@ export default function TeamRecommended() {
   return (
     <div>
       <div className="page-head">
-        <h1>Recommended for your team</h1>
-        <div className="filters" style={{ margin: 0 }}>
-          {['suggested', 'accepted', 'rejected', 'all'].map((f) => (
-            <button key={f} className={`chip ${filter === f ? 'active' : ''}`} onClick={() => setFilter(f)}>
-              {f}
+        <div>
+          <h1>Suggested Problems</h1>
+          <p className="page-sub">Problems that fit your team’s skills. Accept the ones you want to work on.</p>
+        </div>
+        <div className="seg" role="group" aria-label="Show">
+          {[['suggested', 'New'], ['accepted', 'Accepted'], ['rejected', 'Declined'], ['all', 'All']].map(([f, label]) => (
+            <button key={f} type="button" className={'seg-btn' + (filter === f ? ' active' : '')}
+              aria-pressed={filter === f} onClick={() => setFilter(f)}>
+              {label}
             </button>
           ))}
         </div>
@@ -120,39 +124,38 @@ export default function TeamRecommended() {
       <ErrorNote>{error}</ErrorNote>
 
       <div className="card-list">
-        {visible.length === 0 && <Empty>Nothing in this filter.</Empty>}
+        {visible.length === 0 && <Empty>Nothing here right now.</Empty>}
         {visible.map((r) => (
           <div className="card rec-card" key={r.match_id}>
             <div className="card-top">
               <Link to={`/problem/${r.problem_id}`}><h3>{r.title}</h3></Link>
               <div className="card-badges">
                 <Badge tone={r.match_status === 'accepted' ? 'green' : r.match_status === 'rejected' ? 'red' : 'blue'}>
-                  {r.match_status}
+                  {r.match_status === 'accepted' ? 'Accepted' : r.match_status === 'rejected' ? 'Declined' : 'New'}
                 </Badge>
-                <Badge tone="gray">{r.category}</Badge>
+                <Badge tone="gray">{(r.category || '').replace(/_/g, ' ')}</Badge>
               </div>
             </div>
             <p className="card-text">{r.description}</p>
             <div className="note note-info">
-              <b>Why you:</b> {r.explanation}
+              <b>Why this fits your team:</b> {r.explanation}
             </div>
             <div className="card-meta">
-              {r.location && <span className="meta-item"><IconMapPin size={14} /> {r.location}</span>}
-              <span className="meta-item"><IconCpu size={14} /> relevance</span>
-              <ScoreBar value={r.score} label />
-              <LocationButton location={r.location} small label="View Live Location" />
+              {r.location && <span className="meta-item"><IconMapPin size={18} /> {r.location}</span>}
+              <span className="meta-item">Fit: <b>{Math.round((r.score ?? 0) * 100)}%</b></span>
+              <LocationButton location={r.location} />
             </div>
             {r.match_status === 'suggested' && (
               <div className="rec-actions">
-                <button className="btn btn-primary btn-sm" onClick={() => decide(r.match_id, 'accept')}>
-                  <IconCheck size={14} /> Accept problem
+                <button className="btn btn-primary" onClick={() => decide(r.match_id, 'accept')}>
+                  <IconCheck size={20} /> Accept this problem
                 </button>
-                <button className="btn btn-ghost btn-sm" onClick={() => decide(r.match_id, 'reject')}>
-                  <IconX size={14} /> Not for us
+                <button className="btn btn-outline" onClick={() => decide(r.match_id, 'reject')}>
+                  <IconX size={20} /> Not for us
                 </button>
                 <span className="fb-buttons">
-                  <button className="btn btn-ghost btn-sm" onClick={() => feedback(r.match_id, 'good_match')}><IconThumbsUp size={13} /> good rec</button>
-                  <button className="btn btn-ghost btn-sm" onClick={() => feedback(r.match_id, 'bad_match')}><IconThumbsDown size={13} /> bad rec</button>
+                  <button className="btn btn-ghost" onClick={() => feedback(r.match_id, 'good_match')}><IconThumbsUp size={18} /> Good suggestion</button>
+                  <button className="btn btn-ghost" onClick={() => feedback(r.match_id, 'bad_match')}><IconThumbsDown size={18} /> Poor suggestion</button>
                 </span>
               </div>
             )}

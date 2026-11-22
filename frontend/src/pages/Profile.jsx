@@ -68,7 +68,7 @@ export default function Profile() {
     <>
       <div className="page-head">
         <div>
-          <h1>My Profile</h1>
+          <h1>My Account</h1>
         </div>
         <Badge tone="violet" className="role">{me.role}</Badge>
       </div>
@@ -94,7 +94,7 @@ export default function Profile() {
             <span className="pf-label">Email</span>
             <span className="pf-value">
               {me.email}
-              <button className="copy-btn" onClick={() => copy(me.email, 'Email')} title="Copy email"><IconCopy size={13} /> copy</button>
+              <button className="copy-btn" onClick={() => copy(me.email, 'Email')} title="Copy email"><IconCopy size={16} /> Copy</button>
             </span>
           </div>
           <div className="profile-field">
@@ -109,7 +109,7 @@ export default function Profile() {
             <span className="pf-label">User ID</span>
             <span className="pf-value">
               #{me.id}
-              <button className="copy-btn" onClick={() => copy(String(me.id), 'User ID')} title="Copy ID"><IconCopy size={13} /> copy</button>
+              <button className="copy-btn" onClick={() => copy(String(me.id), 'User ID')} title="Copy ID"><IconCopy size={16} /> Copy</button>
             </span>
           </div>
         </div>

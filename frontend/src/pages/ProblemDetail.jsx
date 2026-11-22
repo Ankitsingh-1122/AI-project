@@ -3,8 +3,8 @@ import { Link, useParams } from 'react-router-dom'
 import { api } from '../api.js'
 import { useAuth } from '../auth.jsx'
 import { useToast } from '../toast.jsx'
-import { Badge, DuplicateBadge, ErrorNote, LocationButton, ScoreBar, Select, Spinner, statusTone } from '../components/ui.jsx'
-import { IconAlert, IconBack, IconBox, IconCheck, IconClock, IconFileText, IconGraduationCap, IconMagnet, IconMapPin, IconRefresh, IconThumbsDown, IconThumbsUp, IconX } from '../components/icons.jsx'
+import { Badge, DuplicateBadge, ErrorNote, LocationButton, Select, Spinner, statusLabel, statusTone } from '../components/ui.jsx'
+import { IconAlert, IconBox, IconCheck, IconClock, IconFileText, IconGraduationCap, IconMagnet, IconMapPin, IconRefresh, IconThumbsDown, IconThumbsUp, IconX } from '../components/icons.jsx'
 
 export default function ProblemDetail() {
   const { id } = useParams()
@@ -44,7 +44,7 @@ export default function ProblemDetail() {
           comment: feedbackComment
         }
       })
-      toast.push(`Feedback recorded: ${type === 'good_match' ? 'good match' : 'bad match'}`)
+      toast.push(type === 'good_match' ? 'Thank you — marked as a good match' : 'Thank you — marked as not a good match')
       setFeedbackComment('')
     } catch (err) {
       if (err.status !== 401) toast.push(`Feedback error: ${err.message}`, 'error')
@@ -63,8 +63,8 @@ export default function ProblemDetail() {
       })
       toast.push(
         correct
-          ? 'Thanks — confirmed the duplicate flag'
-          : 'Thanks — flagged the duplicate decision for review'
+          ? 'Thank you — we noted it is the same problem'
+          : 'Thank you — we noted it is a different problem'
       )
       setFeedbackComment('')
     } catch (err) {
@@ -76,7 +76,7 @@ export default function ProblemDetail() {
     try {
       const data = await api(`/api/problems/${id}`, { method: 'PUT', body: { status } })
       setP(data.problem)
-      toast.push(`Status updated to ${status}`)
+      toast.push(`Status changed to “${statusLabel(status)}”`)
     } catch (err) {
       if (err.status !== 401) setError(err.message)
     }
@@ -95,11 +95,11 @@ export default function ProblemDetail() {
     <div>
       <div className="page-head">
         <div>
-          <p className="muted"><Link to="/dashboard"><IconBack size={13} /> back to my problems</Link></p>
-          <h1>#{p.id} · {p.title}</h1>
+          <p className="muted">Report #{p.id}</p>
+          <h1>{p.title}</h1>
         </div>
         <div className="card-badges">
-          <Badge tone={statusTone(p.status)}>{p.status.replace(/_/g, ' ')}</Badge>
+          <Badge tone={statusTone(p.status)}>{statusLabel(p.status)}</Badge>
           <Badge tone="blue">{p.category.replace(/_/g, ' ')}</Badge>
           <DuplicateBadge p={p} />
         </div>
@@ -109,25 +109,131 @@ export default function ProblemDetail() {
 
       {p.is_duplicate && p.duplicate_of && (
         <div className="note note-warn">
-          <IconAlert size={16} /> Flagged as a <b>duplicate</b> of{' '}
-          <Link to={`/problem/${p.duplicate_of.id}`}>#{p.duplicate_of.id} · {p.duplicate_of.title}</Link>{' '}
-          ({trainedDup
-            ? `classifier probability ${(p.duplicate_score ?? 0).toFixed(2)}`
-            : `similarity ${(p.duplicate_score ?? 0).toFixed(2)}`}, threshold {analysis?.threshold ?? '—'}).
-          {user && (
-            <div className="fb-buttons" style={{ marginTop: 8 }}>
-              <button className="btn btn-ghost btn-sm" onClick={() => sendDuplicateFeedback(true)}>
-                <IconCheck size={13} /> yes, duplicate
-              </button>
-              <button className="btn btn-ghost btn-sm" onClick={() => sendDuplicateFeedback(false)}>
-                <IconX size={13} /> not a duplicate
-              </button>
-            </div>
-          )}
+          <IconAlert size={22} />
+          <div>
+            <b>This looks like a problem that was already reported:</b>{' '}
+            <Link to={`/problem/${p.duplicate_of.id}`}>{p.duplicate_of.title}</Link>.
+            {user && (
+              <div className="fb-buttons" style={{ marginTop: 10 }}>
+                <button className="btn btn-outline" onClick={() => sendDuplicateFeedback(true)}>
+                  <IconCheck size={18} /> Yes, it is the same
+                </button>
+                <button className="btn btn-outline" onClick={() => sendDuplicateFeedback(false)}>
+                  <IconX size={18} /> No, it is different
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
-      {/* AI insight strip — every value comes from the live analysis payload */}
+      <div className="result-grid">
+        <div className="card">
+          <h2>What was reported</h2>
+          <p>{p.description}</p>
+          <div className="card-meta">
+            <span className="meta-item"><IconClock size={18} /> {new Date(p.created_at).toLocaleString()}</span>
+          </div>
+          {p.location && (
+            <div className="loc-block">
+              <div>
+                <div className="loc-label"><IconMapPin size={16} /> Where</div>
+                <div className="loc-text">{p.location}</div>
+              </div>
+              <LocationButton location={p.location} />
+            </div>
+          )}
+          {canEdit && (
+            <div className="filter-inline">
+              <label className="fl-block">
+                <span>Change status</span>
+                <Select
+                  value={p.status}
+                  onChange={changeStatus}
+                  options={['open', 'in_review', 'assigned', 'resolved'].map((s) => ({
+                    value: s,
+                    label: statusLabel(s),
+                  }))}
+                />
+              </label>
+            </div>
+          )}
+        </div>
+
+        <div className="card">
+          <h2>Similar reports</h2>
+          {p.similar?.length === 0 ? (
+            <p className="muted">No similar reports found.</p>
+          ) : (
+            p.similar.map((s) => (
+              <div className="similar-row" key={s.id}>
+                <Link to={`/problem/${s.id}`}>{s.title}</Link>
+                <span className="muted">{Math.round((s.score ?? 0) * 100)}% alike</span>
+              </div>
+            ))
+          )}
+        </div>
+
+        <div className="card">
+          <h2>Teams that may help</h2>
+          {p.recommended_teams?.length === 0 ? (
+            <p className="muted">No teams suggested yet.</p>
+          ) : (
+            p.recommended_teams.map((t) => (
+              <div className="rec-block" key={t.match_id}>
+                <div className="rec-head">
+                  <b>{t.ranking}. {t.team_name}</b>
+                  <Badge tone={t.status === 'accepted' ? 'green' : t.status === 'rejected' ? 'red' : 'gray'}>
+                    {t.status === 'accepted' ? 'Accepted' : t.status === 'rejected' ? 'Declined' : 'Suggested'}
+                  </Badge>
+                </div>
+                <div className="muted">{t.explanation}</div>
+                {t.matched_keywords?.length > 0 && (
+                  <div className="kw-row" aria-label="Matching words">
+                    {t.matched_keywords.map((k) => (
+                      <span className="kw" key={k}>{k}</span>
+                    ))}
+                  </div>
+                )}
+                <div className="rec-foot">
+                  <span className="muted">Fit: <b>{Math.round((t.score ?? 0) * 100)}%</b></span>
+                  {user && (
+                    <div className="fb-buttons">
+                      <button className="btn btn-outline" onClick={() => sendFeedback(t.match_id, 'good_match')}><IconThumbsUp size={18} /> Good match</button>
+                      <button className="btn btn-outline" onClick={() => sendFeedback(t.match_id, 'bad_match')}><IconThumbsDown size={18} /> Not a match</button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+
+          {user && (
+            <div className="form-inline">
+              <input
+                value={feedbackComment}
+                onChange={(e) => setFeedbackComment(e.target.value)}
+                placeholder="Add a note (optional)"
+              />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {analysis && (
+        <div className="card">
+          <button className="btn btn-outline" onClick={() => setShowNlp((s) => !s)} aria-expanded={showNlp}>
+            {showNlp ? 'Hide technical details' : 'Show technical details (for the curious)'}
+          </button>
+
+          {showNlp && (
+            <>
+            <p className="muted">
+              Model: {analysis.embedder === 'sentence'
+                ? `sentence-transformers (${analysis.sentence_model})`
+                : 'TF-IDF baseline'}
+              {' '}· duplicate threshold: {analysis.threshold} · cluster: {p.cluster || 'unassigned'}
+            </p>
       <div className="ai-strip">
         <div className="ai-strip-item" title="Trained duplicate classifier">
           <span className="ai-strip-icon" aria-hidden="true"><IconRefresh size={19} /></span>
@@ -176,117 +282,6 @@ export default function ProblemDetail() {
         )}
       </div>
 
-      <div className="result-grid">
-        <div className="card">
-          <h3>Details</h3>
-          <p className="card-text">{p.description}</p>
-          <div className="card-meta">
-            <span className="meta-item"><IconBox size={14} /> cluster: {p.cluster || '—'}</span>
-            <span className="meta-item"><IconClock size={14} /> {new Date(p.created_at).toLocaleString()}</span>
-          </div>
-          {p.location && (
-            <div className="loc-block">
-              <div>
-                <div className="loc-label"><IconMapPin size={14} /> Reported location</div>
-                <div className="loc-text">{p.location}</div>
-              </div>
-              <LocationButton location={p.location} />
-            </div>
-          )}
-          {canEdit && (
-            <div className="filter-inline">
-              <label className="fl-block">
-                <span>Status</span>
-                <Select
-                  value={p.status}
-                  onChange={changeStatus}
-                  options={['open', 'in_review', 'assigned', 'resolved'].map((s) => ({
-                    value: s,
-                    label: s.replace(/_/g, ' '),
-                  }))}
-                />
-              </label>
-            </div>
-          )}
-        </div>
-
-        <div className="card">
-          <h3>Similar problems (semantic similarity)</h3>
-          {p.similar?.length === 0 ? (
-            <p className="muted">No similar problems found.</p>
-          ) : (
-            p.similar.map((s) => (
-              <div className="similar-row" key={s.id}>
-                <Link to={`/problem/${s.id}`}>#{s.id} {s.title}</Link>
-                <ScoreBar value={s.score} label />
-              </div>
-            ))
-          )}
-          <p className="muted small">
-            Cosine similarity — e.g. &ldquo;street light is broken&rdquo; ≈ &ldquo;the streetlamp has
-            stopped working&rdquo;.
-          </p>
-        </div>
-
-        <div className="card">
-          <h3>Recommended student teams</h3>
-          {p.recommended_teams?.length === 0 ? (
-            <p className="muted">No team recommendations yet.</p>
-          ) : (
-            p.recommended_teams.map((t) => (
-              <div className="rec-block" key={t.match_id}>
-                <div className="rec-head">
-                  <b>#{t.ranking} {t.team_name}</b>
-                  <Badge tone={t.status === 'accepted' ? 'green' : t.status === 'rejected' ? 'red' : 'gray'}>
-                    {t.status}
-                  </Badge>
-                </div>
-                <div className="muted small">{t.explanation}</div>
-                {t.matched_keywords?.length > 0 && (
-                  <div className="kw-row">
-                    {t.matched_keywords.map((k) => (
-                      <span className="kw" key={k}>{k}</span>
-                    ))}
-                  </div>
-                )}
-                <div className="rec-foot">
-                  <ScoreBar value={t.score} label />
-                  {user && (
-                    <div className="fb-buttons">
-                      <button className="btn btn-ghost btn-sm" onClick={() => sendFeedback(t.match_id, 'good_match')} aria-label="Good match"><IconThumbsUp size={14} /></button>
-                      <button className="btn btn-ghost btn-sm" onClick={() => sendFeedback(t.match_id, 'bad_match')} aria-label="Bad match"><IconThumbsDown size={14} /></button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))
-          )}
-
-          {user && (
-            <div className="form-inline">
-              <input
-                value={feedbackComment}
-                onChange={(e) => setFeedbackComment(e.target.value)}
-                placeholder="Optional comment for your feedback…"
-              />
-            </div>
-          )}
-        </div>
-      </div>
-
-      {analysis && (
-        <div className="card">
-          <button className="link-btn" onClick={() => setShowNlp((s) => !s)}>
-            {showNlp ? '▾' : '▸'} AI/ML pipeline details
-            <span className="muted small">
-              {' '}· model: {analysis.embedder === 'sentence'
-                ? `sentence-transformers (${analysis.sentence_model})`
-                : 'TF-IDF baseline'}
-              {' '}· duplicate threshold: {analysis.threshold}
-            </span>
-          </button>
-
-          {showNlp && (
             <div className="nlp-panel">
               <div className="nlp-col">
                 <h4>NLP preprocessing</h4>
@@ -342,6 +337,7 @@ export default function ProblemDetail() {
                 </p>
               </div>
             </div>
+            </>
           )}
         </div>
       )}

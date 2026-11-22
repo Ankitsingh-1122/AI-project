@@ -2,21 +2,17 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api.js'
 import { useAuth } from '../auth.jsx'
-import { useTheme } from '../theme.jsx'
-import { IconChart, IconGraduationCap, IconLayers, IconMoon, IconRefresh, IconSparkles, IconSun, IconUsers } from '../components/icons.jsx'
+import TextSize from '../components/TextSize.jsx'
+import { IconEdit, IconSearch, IconUsers } from '../components/icons.jsx'
 
-const FEATURES = [
-  { icon: IconRefresh, title: 'Duplicate detection', text: 'New reports are compared against every existing problem with semantic similarity. Near-duplicates are flagged instantly on submission.' },
-  { icon: IconSparkles, title: 'Semantic understanding', text: '“Street light is broken” and “the streetlamp has stopped working” are recognised as the same problem, even with different words.' },
-  { icon: IconLayers, title: 'Automatic clustering', text: 'Related problems are grouped into meaningful clusters with K-Means, auto-selecting the number of clusters via silhouette score.' },
-  { icon: IconGraduationCap, title: 'Student-team matching', text: 'Each problem is matched to student teams by skills, interests and experience - with explainable, ranked recommendations.' },
-  { icon: IconChart, title: 'Measurable AI', text: 'Precision, recall, F1, confusion matrix, Precision@K and cluster purity are computed on labelled evaluation data.' },
-  { icon: IconUsers, title: 'Feedback loop', text: 'Citizens and admins can rate AI decisions; feedback is stored for continuous model improvement.' },
+const STEPS = [
+  { icon: IconEdit, title: 'Tell us the problem', text: 'Write what is wrong and where. A broken street light, a pothole, a water problem — anything in your area.' },
+  { icon: IconSearch, title: 'We check it', text: 'We look to see if someone already reported the same thing, so nothing is counted twice.' },
+  { icon: IconUsers, title: 'A team helps', text: 'Your report is sent to a student team with the right skills. You can follow what happens next.' },
 ]
 
 export default function Landing() {
   const { user } = useAuth()
-  const { theme, toggle } = useTheme()
   const [stats, setStats] = useState(null)
 
   useEffect(() => {
@@ -30,91 +26,83 @@ export default function Landing() {
   return (
     <div className="landing">
       <header className="topbar">
-        <Link to="/" className="brand">
-          <span className="brand-icon"><img src="/logo-mark.png" alt="" aria-hidden="true" /></span> CivicAI
-        </Link>
-        <div className="topbar-right">
-          <button className="theme-btn" onClick={toggle} aria-label="Toggle light / dark mode" title="Toggle light / dark mode">
-            <span className="theme-icon" aria-hidden="true">
-              {theme === 'dark' ? <IconSun size={18} /> : <IconMoon size={18} />}
-            </span>
-          </button>
-          <Link to={user ? home : '/login'} className="btn btn-ghost btn-sm">
-            {user ? 'Open dashboard' : 'Log in'}
+        <div className="topbar-row">
+          <Link to="/" className="topbar-brand" aria-label="CivicAI home">
+            <span className="brand-icon"><img src="/logo-mark.png" alt="" aria-hidden="true" /></span>
+            <span className="brand-text">Civic<span className="grad">AI</span></span>
           </Link>
-          {!user && (
-            <Link to="/register" className="btn btn-primary btn-sm">
-              Sign up
-            </Link>
+          <div className="topbar-spacer" />
+          <TextSize />
+          {user ? (
+            <Link to={home} className="btn btn-primary">Go to my page</Link>
+          ) : (
+            <Link to="/login" className="btn btn-outline">Log in</Link>
           )}
         </div>
       </header>
 
-      <section className="hero">
-        <div className="hero-text">
-          <img src="/logo.png" className="hero-logo" alt="CivicAI — Smart Citizens, Smart Solutions" />
-          <span className="hero-badge"><IconSparkles size={15} /> AI/ML civic platform · live trained models</span>
-          <h1>
-            Citizen problems, <span className="grad">understood</span>, deduplicated & matched.
-          </h1>
-          <p className="hero-sub">
-            An AI/ML platform that detects duplicate civic complaints, clusters related problems,
-            and recommends the right student teams to tackle them - with full explainability.
-          </p>
-          <div className="hero-cta">
-            <Link to={user ? home : '/register'} className="btn btn-primary btn-lg">
-              {user ? 'Go to dashboard' : 'Get started free'}
-            </Link>
-            <Link to="/login" className="btn btn-outline btn-lg">
-              I have an account
-            </Link>
+      <main>
+        <section className="hero">
+          <div className="hero-text">
+            <h1>
+              Report a problem in your area. <span className="grad">We will help get it fixed.</span>
+            </h1>
+            <p className="hero-sub">
+              Tell us about a broken street light, a pothole or any other problem near you.
+              We connect it with a student team that can help.
+            </p>
+            <div className="hero-cta">
+              {user ? (
+                <Link to={home} className="btn btn-primary btn-lg">Go to my page</Link>
+              ) : (
+                <>
+                  <Link to="/register" className="btn btn-primary btn-lg">Create a free account</Link>
+                  <Link to="/login" className="btn btn-outline btn-lg">I already have an account</Link>
+                </>
+              )}
+            </div>
           </div>
-          <div className="hero-demo">
-            <strong>Demo logins</strong>
-            <span>admin@civic.demo / admin123</span>
-            <span>citizen1@civic.demo / demo123</span>
-            <span>team1@civic.demo / demo123</span>
-          </div>
-        </div>
-        <div className="hero-stats">
-          {stats ? (
-            <>
-              <div className="hstat"><b>{stats.total_problems}</b><span>problems reported</span></div>
-              <div className="hstat"><b>{stats.duplicates_detected}</b><span>duplicates caught</span></div>
-              <div className="hstat"><b>{stats.clusters}</b><span>clusters formed</span></div>
-              <div className="hstat"><b>{stats.teams}</b><span>student teams</span></div>
-              <div className="hstat"><b>{stats.recommendations}</b><span>AI recommendations</span></div>
-            </>
-          ) : (
-            <div className="hstat"><b>…</b><span>loading live stats</span></div>
-          )}
-        </div>
-      </section>
 
-      <section className="features">
-        {FEATURES.map((f) => (
-          <div className="feature-card" key={f.title}>
-            <div className="feature-icon" aria-hidden="true"><f.icon size={21} /></div>
-            <h3>{f.title}</h3>
-            <p>{f.text}</p>
+          <div className="hero-side">
+            <img src="/logo.png" className="hero-logo" alt="CivicAI — Smart Citizens, Smart Solutions" />
+            {stats && (
+              <div className="hero-stats">
+                <div className="hstat"><b>{stats.total_problems}</b><span>problems reported</span></div>
+                <div className="hstat"><b>{stats.teams}</b><span>student teams ready to help</span></div>
+              </div>
+            )}
           </div>
-        ))}
-      </section>
+        </section>
 
-      <section className="how">
-        <h2>How it works</h2>
-        <ol className="steps">
-          <li><b>Submit</b> a problem (title, description, location, category).</li>
-          <li><b>Preprocess</b> text with NLP: tokenization, stop-words, normalization.</li>
-          <li><b>Embed</b> the problem and find the most similar existing reports.</li>
-          <li><b>Deduplicate</b> against a threshold tuned experimentally on labelled data.</li>
-          <li><b>Cluster</b> all problems with K-Means (auto k via silhouette score).</li>
-          <li><b>Match & rank</b> student teams by skills, interests and experience - with explanations.</li>
-        </ol>
-      </section>
+        <section className="how">
+          <h2>How it works</h2>
+          <ol className="how-steps">
+            {STEPS.map((s, i) => (
+              <li className="how-step" key={s.title}>
+                <span className="how-num" aria-hidden="true">{i + 1}</span>
+                <div className="feature-icon" aria-hidden="true"><s.icon size={26} /></div>
+                <h3>{s.title}</h3>
+                <p>{s.text}</p>
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        <section className="demo-section">
+          <details className="demo-details">
+            <summary>Just want to look around? Use a demo login</summary>
+            <p className="muted">These sample accounts have example data. On the Log in page you can also press one button to sign in.</p>
+            <ul className="demo-list">
+              <li><b>Citizen:</b> citizen1@civic.demo / demo123</li>
+              <li><b>Student team:</b> team1@civic.demo / demo123</li>
+              <li><b>Administrator:</b> admin@civic.demo / admin123</li>
+            </ul>
+          </details>
+        </section>
+      </main>
 
       <footer className="footer">
-        CivicAI · React + FastAPI + PostgreSQL/SQLite + scikit-learn + sentence-transformers
+        CivicAI · Report a problem in your area and we connect it with a team that can help.
       </footer>
     </div>
   )
