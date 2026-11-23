@@ -1,4 +1,4 @@
-import json
+﻿import json
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
@@ -29,6 +29,28 @@ def dup_info(db: Session, problem: Problem) -> dict | None:
     return {"id": d.id, "title": d.title} if d else None
 
 
+def assigned_team_info(db: Session, problem: Problem) -> dict | None:
+    match = db.scalars(
+        select(Match).where(
+            Match.problem_id == problem.id,
+            Match.status.in_(["accepted", "assigned"])
+        ).order_by(
+            Match.status.asc()
+        )
+    ).first()
+    if not match:
+        return None
+    team = db.get(Team, match.team_id)
+    if not team:
+        return None
+    return {
+        "id": team.id,
+        "team_name": team.team_name,
+        "match_id": match.id,
+        "status": match.status,
+    }
+
+
 def problem_out(db: Session, p: Problem) -> dict:
     return {
         "id": p.id,
@@ -44,6 +66,7 @@ def problem_out(db: Session, p: Problem) -> dict:
         "created_at": p.created_at.isoformat() if p.created_at else None,
         "updated_at": p.updated_at.isoformat() if p.updated_at else None,
         "owner_id": p.user_id,
+        "assigned_team": assigned_team_info(db, p),
     }
 
 

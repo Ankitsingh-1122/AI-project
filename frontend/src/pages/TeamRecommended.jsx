@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api.js'
 import { useAuth } from '../auth.jsx'
@@ -44,7 +44,7 @@ export default function TeamRecommended() {
       toast.push(
         status === 'accept'
           ? 'Problem accepted — your team is now working on it'
-          : 'Okay — we removed it from your list'
+          : 'Declined — administrator has been alerted to reassign'
       )
       await load()
     } catch (err) {
@@ -89,19 +89,36 @@ export default function TeamRecommended() {
   // problem from the queue. The same applies to near-duplicate reports with
   // an identical title (the API lists them as separate problems). They stay
   // visible under the "All" tab.
-  const decided = recs.filter((r) => r.match_status !== 'suggested')
+  const isPending = (s) => s === 'suggested' || s === 'assigned'
+  const decided = recs.filter((r) => !isPending(r.match_status))
   const decidedProblems = new Set(decided.map((r) => r.problem_id))
   const decidedTitles = new Set(
     decided.map((r) => (r.title || '').toLowerCase().trim()).filter(Boolean)
   )
 
   const visible = recs.filter((r) => {
-    if (filter !== 'all' && r.match_status !== filter) return false
-    if (r.match_status === 'suggested' && filter !== 'all') {
+    if (filter === 'suggested') {
+      if (!isPending(r.match_status)) return false
+    } else if (filter !== 'all' && r.match_status !== filter) {
+      return false
+    }
+    if (isPending(r.match_status) && filter !== 'all') {
       if (decidedProblems.has(r.problem_id)) return false
       if (decidedTitles.has((r.title || '').toLowerCase().trim())) return false
+      if (r.status === 'resolved') return false
+      if (r.match_status === 'suggested' && r.status === 'assigned') return false
     }
     return true
+  })
+
+  // Ensure assigned problems always come first, followed by newest created_at / highest score
+  const sorted = [...visible].sort((a, b) => {
+    if (a.match_status === 'assigned' && b.match_status !== 'assigned') return -1
+    if (b.match_status === 'assigned' && a.match_status !== 'assigned') return 1
+    const tA = new Date(a.created_at || 0).getTime()
+    const tB = new Date(b.created_at || 0).getTime()
+    if (tB !== tA) return tB - tA
+    return (b.score || 0) - (a.score || 0)
   })
 
   return (
@@ -112,7 +129,7 @@ export default function TeamRecommended() {
           <p className="page-sub">Problems that fit your team’s skills. Accept the ones you want to work on.</p>
         </div>
         <div className="seg" role="group" aria-label="Show">
-          {[['suggested', 'New'], ['accepted', 'Accepted'], ['rejected', 'Declined'], ['all', 'All']].map(([f, label]) => (
+          {[['suggested', 'New / Assigned'], ['accepted', 'Accepted'], ['rejected', 'Declined'], ['all', 'All']].map(([f, label]) => (
             <button key={f} type="button" className={'seg-btn' + (filter === f ? ' active' : '')}
               aria-pressed={filter === f} onClick={() => setFilter(f)}>
               {label}
@@ -124,14 +141,14 @@ export default function TeamRecommended() {
       <ErrorNote>{error}</ErrorNote>
 
       <div className="card-list">
-        {visible.length === 0 && <Empty>Nothing here right now.</Empty>}
-        {visible.map((r) => (
+        {sorted.length === 0 && <Empty>Nothing here right now.</Empty>}
+        {sorted.map((r) => (
           <div className="card rec-card" key={r.match_id}>
             <div className="card-top">
               <Link to={`/problem/${r.problem_id}`}><h3>{r.title}</h3></Link>
               <div className="card-badges">
-                <Badge tone={r.match_status === 'accepted' ? 'green' : r.match_status === 'rejected' ? 'red' : 'blue'}>
-                  {r.match_status === 'accepted' ? 'Accepted' : r.match_status === 'rejected' ? 'Declined' : 'New'}
+                <Badge tone={r.match_status === 'accepted' ? 'green' : r.match_status === 'rejected' ? 'red' : r.match_status === 'assigned' ? 'amber' : 'blue'}>
+                  {r.match_status === 'accepted' ? 'Accepted' : r.match_status === 'rejected' ? 'Declined' : r.match_status === 'assigned' ? 'AI Assigned' : 'New'}
                 </Badge>
                 <Badge tone="gray">{(r.category || '').replace(/_/g, ' ')}</Badge>
               </div>
@@ -145,7 +162,7 @@ export default function TeamRecommended() {
               <span className="meta-item">Fit: <b>{Math.round((r.score ?? 0) * 100)}%</b></span>
               <LocationButton location={r.location} />
             </div>
-            {r.match_status === 'suggested' && (
+            {(r.match_status === 'suggested' || r.match_status === 'assigned') && (
               <div className="rec-actions">
                 <button className="btn btn-primary" onClick={() => decide(r.match_id, 'accept')}>
                   <IconCheck size={20} /> Accept this problem

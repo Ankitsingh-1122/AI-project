@@ -1,8 +1,8 @@
-import json
+﻿import json
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import case, select
 from sqlalchemy.orm import Session
 
 from ..database import get_db
@@ -88,7 +88,13 @@ def my_recommendations(
         return []
     matches = (
         db.scalars(
-            select(Match).where(Match.team_id == team.id).order_by(Match.created_at.desc(), Match.ranking)
+            select(Match)
+            .where(Match.team_id == team.id)
+            .order_by(
+                case((Match.status == "assigned", 1), (Match.status == "suggested", 2), else_=3),
+                Match.created_at.desc(),
+                Match.id.desc(),
+            )
         )
         .all()
     )
@@ -96,6 +102,10 @@ def my_recommendations(
     for m in matches:
         p = db.get(Problem, m.problem_id)
         if not p:
+            continue
+        # If this recommendation is still 'suggested' but the problem was already accepted
+        # by another team or resolved, do not offer it as an open task.
+        if m.status == "suggested" and p.status in ("assigned", "resolved"):
             continue
         try:
             expl = json.loads(m.explanation or "{}")
@@ -286,21 +296,73 @@ def match_decision(
     team = db.get(Team, m.team_id)
     if user.role != "admin" and (team is None or team.user_id != user.id):
         raise HTTPException(403, "Not your team's match")
+    if body.status == "accept":
+        existing_accepted = db.scalars(
+            select(Match).where(
+                Match.problem_id == m.problem_id,
+                Match.status == "accepted",
+                Match.id != m.id,
+            )
+        ).first()
+        if existing_accepted:
+            raise HTTPException(400, "This problem has already been accepted by another team")
     m.status = "accepted" if body.status == "accept" else "rejected"
     problem = db.get(Problem, m.problem_id)
-    if body.status == "accept" and problem and problem.status == "open":
-        problem.status = "assigned"
-    # Let the problem's reporter know the decision (bell notification).
-    if problem is not None and team is not None:
-        verb = "accepted" if body.status == "accept" else "rejected"
-        db.add(
-            Notification(
-                user_id=problem.user_id,
-                type="match_decision",
-                title=f"Team {team.team_name} {verb} your problem",
-                body=f"“{problem.title}” (#{problem.id}) was {verb} by {team.team_name}.",
+    admins = db.scalars(select(User).where(User.role == "admin")).all()
+
+    if body.status == "accept":
+        if problem:
+            problem.status = "assigned"
+
+        # 1. Notify citizen reporter
+        if problem and team and problem.user_id:
+            db.add(
+                Notification(
+                    user_id=problem.user_id,
+                    type="team_accepted",
+                    title=f"Team {team.team_name} accepted your problem",
+                    body=f"“{problem.title}” (#{problem.id}) was confirmed and accepted by {team.team_name}. Work is underway.",
+                )
             )
-        )
+        # 2. Notify admin
+        if problem and team:
+            for admin in admins:
+                db.add(
+                    Notification(
+                        user_id=admin.id,
+                        type="team_accepted",
+                        title=f"Team {team.team_name} Accepted #{problem.id}",
+                        body=f"Team {team.team_name} confirmed the assignment for '{problem.title}' (#{problem.id}).",
+                    )
+                )
+    else:  # REJECT / DECLINE
+        if problem:
+            problem.status = "open"  # Reset status so it can be reassigned
+
+        # 1. REPORT TO ADMIN (Alert for reassignment)
+        if problem and team:
+            for admin in admins:
+                db.add(
+                    Notification(
+                        user_id=admin.id,
+                        type="team_rejected",
+                        title=f"ALERT: Team {team.team_name} Declined #{problem.id}",
+                        body=(
+                            f"Team {team.team_name} has declined assignment for '{problem.title}' (#{problem.id}). "
+                            f"Problem status has been reset to 'Open'. Please review or manually reassign."
+                        ),
+                    )
+                )
+        # 2. Notify citizen reporter
+        if problem and team and problem.user_id:
+            db.add(
+                Notification(
+                    user_id=problem.user_id,
+                    type="team_rejected",
+                    title=f"Update on Report #{problem.id}",
+                    body=f"Team {team.team_name} was unable to take on '{problem.title}'. The report has returned to the queue for reassignment.",
+                )
+            )
     db.commit()
     return {
         "match_id": m.id,

@@ -27,6 +27,7 @@ export default function TeamDashboard() {
   const [busy, setBusy] = useState(false)
   const [deletedNote, setDeletedNote] = useState(null)
   const [bannerHidden, setBannerHidden] = useState(false)
+  const [assignedProblems, setAssignedProblems] = useState([])
 
   useEffect(() => {
     load()
@@ -36,8 +37,15 @@ export default function TeamDashboard() {
     try {
       const me = await api('/api/auth/me')
       if (me.team_id) {
-        const t = await api(`/api/teams/${me.team_id}`)
+        const [t, recs] = await Promise.all([
+          api(`/api/teams/${me.team_id}`),
+          api('/api/teams/my-recommendations').catch(() => [])
+        ])
         setTeam(t)
+        const pending = (recs || []).filter(
+          (r) => r.match_status === 'assigned' && r.status !== 'resolved'
+        )
+        setAssignedProblems(pending)
         setForm({
           team_name: t.team_name,
           description: t.description,
@@ -119,8 +127,34 @@ export default function TeamDashboard() {
     <div>
       <div className="page-head">
         <h1>My Team</h1>
-        <Link to="/team/recommended" className="btn btn-primary btn-lg">See suggested problems <IconChevronRight size={20} /></Link>
+        <Link to="/team/recommended" className="btn btn-primary btn-lg">
+          See suggested problems
+          {assignedProblems.length > 0 && (
+            <span className="badge badge-amber" style={{ marginLeft: 8, padding: '2px 8px', borderRadius: '12px' }}>
+              {assignedProblems.length} new
+            </span>
+          )}
+          <IconChevronRight size={20} />
+        </Link>
       </div>
+
+      {assignedProblems.length > 0 && (
+        <div className="card note note-info" style={{ marginBottom: 20, borderLeft: '4px solid var(--warn, #f59e0b)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+            <div>
+              <div style={{ fontWeight: 600, fontSize: '1.05rem', color: 'var(--warn, #f59e0b)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <IconCpu size={20} /> {assignedProblems.length} Problem{assignedProblems.length > 1 ? 's' : ''} Assigned by AI to Your Team
+              </div>
+              <p style={{ margin: '6px 0 0 0' }}>
+                Latest: <b>{assignedProblems[0].title}</b> ({Math.round((assignedProblems[0].score ?? 0) * 100)}% fit match)
+              </p>
+            </div>
+            <Link to="/team/recommended" className="btn btn-primary">
+              Review & Accept <IconChevronRight size={18} />
+            </Link>
+          </div>
+        </div>
+      )}
 
       <ErrorNote>{error}</ErrorNote>
 

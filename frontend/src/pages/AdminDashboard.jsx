@@ -1,22 +1,17 @@
-import { useEffect, useRef, useState } from 'react'
+﻿import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import {
-  Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart,
-  ResponsiveContainer, Tooltip, XAxis, YAxis
-} from 'recharts'
 import { IconAlert, IconBox, IconCheckCircle, IconClipboard, IconCpu, IconLayers, IconRefresh, IconUsers } from '../components/icons.jsx'
 import { api, apiBlob } from '../api.js'
 import { useTheme } from '../theme.jsx'
 import { Badge, Empty, ErrorNote, Spinner, StatCard } from '../components/ui.jsx'
 import DataLabels from '../components/DataLabels.jsx'
 
-const CATEGORY_COLORS = ['#2563eb', '#16a34a', '#dc2626', '#9333ea', '#ea580c', '#0891b2', '#ca8a04', '#db2777']
-
-const CHART_KINDS = ['category', 'status', 'timeline']
+const CHART_KINDS = ['category', 'status', 'timeline', 'heatmap']
 const CHART_TITLES = {
-  category: 'Problems by category (seaborn)',
-  status: 'Problems by status (matplotlib)',
-  timeline: 'Growth over time (seaborn + matplotlib)'
+  category: 'Problems by category — Seaborn barplot (muted categorical palette)',
+  status: 'Problems by status — Seaborn barplot (status hues & percentage shares)',
+  timeline: 'Growth over time — Seaborn lineplot & density area',
+  heatmap: 'Category × Status cross-tabulation matrix — Seaborn heatmap'
 }
 
 export default function AdminDashboard() {
@@ -48,14 +43,25 @@ export default function AdminDashboard() {
     async function run() {
       try {
         const next = {}
+        let anySuccess = false
         for (const kind of CHART_KINDS) {
-          const blob = await apiBlob(`/api/admin/charts/${kind}?theme=${theme}`)
-          if (!live) return
-          next[kind] = URL.createObjectURL(blob)
+          try {
+            const blob = await apiBlob(`/api/admin/charts/${kind}?theme=${theme}`)
+            if (!live) return
+            next[kind] = URL.createObjectURL(blob)
+            anySuccess = true
+          } catch (e) {
+            console.warn(`Chart ${kind} unavailable:`, e)
+          }
         }
         const old = chartUrls.current
         chartUrls.current = next
         setCharts(next)
+        if (!anySuccess) {
+          setChartErr('Charts are rendering or backend is reloading...')
+        } else {
+          setChartErr('')
+        }
         Object.values(old).forEach((u) => u && URL.revokeObjectURL(u))
       } catch (e) {
         if (live) setChartErr(e.message)
@@ -102,9 +108,6 @@ export default function AdminDashboard() {
   const cm = dedup.confusion_matrix || {}
   const matching = perf?.team_matching || {}
   const clusterEval = perf?.clustering || {}
-
-  const categoryData = Object.entries(stats.by_category || {}).map(([name, value]) => ({ name, value }))
-  const statusData = Object.entries(stats.by_status || {}).map(([name, value]) => ({ name, value }))
 
   return (
     <div>
@@ -173,6 +176,9 @@ export default function AdminDashboard() {
                 <Badge tone={{ open: 'blue', in_review: 'amber', assigned: 'violet', resolved: 'green' }[p.status] || 'gray'}>
                   {p.status.replace(/_/g, ' ')}
                 </Badge>
+                {p.assigned_team && (
+                  <Badge tone="green">Team: {p.assigned_team.team_name}</Badge>
+                )}
                 <span className="recent-meta">{new Date(p.created_at).toLocaleDateString()}</span>
               </div>
             ))
@@ -180,43 +186,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      <div className="two-col">
-        <div className="card">
-          <h3>Problems by category</h3>
-          <div className="chart">
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={categoryData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                <Tooltip />
-                <Bar dataKey="value" radius={[6, 6, 0, 0]}>
-                  {categoryData.map((_, i) => (
-                    <Cell key={i} fill={CATEGORY_COLORS[i % CATEGORY_COLORS.length]} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        <div className="card">
-          <h3>Problems by status</h3>
-          <div className="chart">
-            <ResponsiveContainer width="100%" height={260}>
-              <PieChart>
-                <Pie data={statusData} dataKey="value" nameKey="name" innerRadius={55} outerRadius={90} paddingAngle={3}>
-                  {statusData.map((_, i) => (
-                    <Cell key={i} fill={CATEGORY_COLORS[i % CATEGORY_COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      </div>
+      
 
       <div className="card" id="model-performance">
         <h3>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { api } from '../api.js'
 import { useAuth } from '../auth.jsx'
@@ -91,6 +91,16 @@ export default function ProblemDetail() {
   const topTeam = p.recommended_teams?.[0]
   const trainedDup = analysis?.duplicate?.method === 'trained_classifier'
 
+  // If any team has accepted this problem, identify it as the single assigned team.
+  // We hide the other suggested candidates and feedback buttons since the report is
+  // already in progress with this team.
+  const acceptedTeam = p.recommended_teams?.find((t) => t.status === 'accepted' || t.status === 'assigned') || (p.assigned_team ? {
+    team_name: p.assigned_team.team_name,
+    team_id: p.assigned_team.id,
+    status: p.assigned_team.status || 'assigned'
+  } : null)
+  const hasAcceptedTeam = !!acceptedTeam
+
   return (
     <div>
       <div className="page-head">
@@ -100,6 +110,9 @@ export default function ProblemDetail() {
         </div>
         <div className="card-badges">
           <Badge tone={statusTone(p.status)}>{statusLabel(p.status)}</Badge>
+          {p.assigned_team && (
+            <Badge tone="green">Team: {p.assigned_team.team_name}</Badge>
+          )}
           <Badge tone="blue">{p.category.replace(/_/g, ' ')}</Badge>
           <DuplicateBadge p={p} />
         </div>
@@ -175,47 +188,88 @@ export default function ProblemDetail() {
         </div>
 
         <div className="card">
-          <h2>Teams that may help</h2>
-          {p.recommended_teams?.length === 0 ? (
-            <p className="muted">No teams suggested yet.</p>
-          ) : (
-            p.recommended_teams.map((t) => (
-              <div className="rec-block" key={t.match_id}>
+          {hasAcceptedTeam ? (
+            <>
+              <h2>Assigned Team</h2>
+              <div className={acceptedTeam.status === 'accepted' ? 'note note-ok' : 'note note-info'} style={{ marginBottom: 14 }}>
+                <IconCheck size={20} />
+                <div>
+                  {acceptedTeam.status === 'accepted' ? (
+                    <><b>Team Confirmed:</b> <b>{acceptedTeam.team_name}</b> accepted this problem and is actively resolving it.</>
+                  ) : (
+                    <><b>AI Auto-Assigned:</b> AI automatically assigned this problem to <b>{acceptedTeam.team_name}</b> based on cluster analysis &amp; skills. Awaiting team review.</>
+                  )}
+                </div>
+              </div>
+              <div className="rec-block" style={{ borderLeft: `4px solid ${acceptedTeam.status === 'accepted' ? 'var(--ok, #16a34a)' : 'var(--warn, #d97706)'}`, padding: 14 }}>
                 <div className="rec-head">
-                  <b>{t.ranking}. {t.team_name}</b>
-                  <Badge tone={t.status === 'accepted' ? 'green' : t.status === 'rejected' ? 'red' : 'gray'}>
-                    {t.status === 'accepted' ? 'Accepted' : t.status === 'rejected' ? 'Declined' : 'Suggested'}
+                  <b style={{ fontSize: '1.1rem' }}>{acceptedTeam.team_name}</b>
+                  <Badge tone={acceptedTeam.status === 'accepted' ? 'green' : 'amber'}>
+                    {acceptedTeam.status === 'accepted' ? 'Accepted & In Progress' : 'AI Assigned (Pending Confirmation)'}
                   </Badge>
                 </div>
-                <div className="muted">{t.explanation}</div>
-                {t.matched_keywords?.length > 0 && (
-                  <div className="kw-row" aria-label="Matching words">
-                    {t.matched_keywords.map((k) => (
+                {acceptedTeam.explanation && (
+                  <div className="muted" style={{ margin: '8px 0' }}>{acceptedTeam.explanation}</div>
+                )}
+                {acceptedTeam.matched_keywords?.length > 0 && (
+                  <div className="kw-row" aria-label="Matching skills and areas" style={{ marginTop: 8 }}>
+                    {acceptedTeam.matched_keywords.map((k) => (
                       <span className="kw" key={k}>{k}</span>
                     ))}
                   </div>
                 )}
-                <div className="rec-foot">
-                  <span className="muted">Fit: <b>{Math.round((t.score ?? 0) * 100)}%</b></span>
-                  {user && (
-                    <div className="fb-buttons">
-                      <button className="btn btn-outline" onClick={() => sendFeedback(t.match_id, 'good_match')}><IconThumbsUp size={18} /> Good match</button>
-                      <button className="btn btn-outline" onClick={() => sendFeedback(t.match_id, 'bad_match')}><IconThumbsDown size={18} /> Not a match</button>
-                    </div>
-                  )}
+                <div style={{ marginTop: 14 }}>
+                  <Link to={`/teams/${acceptedTeam.team_id}`} className="btn btn-outline btn-sm">
+                    View Team Details
+                  </Link>
                 </div>
               </div>
-            ))
-          )}
+            </>
+          ) : (
+            <>
+              <h2>Teams that may help</h2>
+              {p.recommended_teams?.length === 0 ? (
+                <p className="muted">No teams suggested yet.</p>
+              ) : (
+                p.recommended_teams.map((t) => (
+                  <div className="rec-block" key={t.match_id}>
+                    <div className="rec-head">
+                      <b>{t.ranking}. {t.team_name}</b>
+                      <Badge tone={t.status === 'accepted' ? 'green' : t.status === 'rejected' ? 'red' : 'gray'}>
+                        {t.status === 'accepted' ? 'Accepted' : t.status === 'rejected' ? 'Declined' : 'Suggested'}
+                      </Badge>
+                    </div>
+                    <div className="muted">{t.explanation}</div>
+                    {t.matched_keywords?.length > 0 && (
+                      <div className="kw-row" aria-label="Matching words">
+                        {t.matched_keywords.map((k) => (
+                          <span className="kw" key={k}>{k}</span>
+                        ))}
+                      </div>
+                    )}
+                    <div className="rec-foot">
+                      <span className="muted">Fit: <b>{Math.round((t.score ?? 0) * 100)}%</b></span>
+                      {user && (
+                        <div className="fb-buttons">
+                          <button className="btn btn-outline" onClick={() => sendFeedback(t.match_id, 'good_match')}><IconThumbsUp size={18} /> Good match</button>
+                          <button className="btn btn-outline" onClick={() => sendFeedback(t.match_id, 'bad_match')}><IconThumbsDown size={18} /> Not a match</button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
 
-          {user && (
-            <div className="form-inline">
-              <input
-                value={feedbackComment}
-                onChange={(e) => setFeedbackComment(e.target.value)}
-                placeholder="Add a note (optional)"
-              />
-            </div>
+              {user && (
+                <div className="form-inline">
+                  <input
+                    value={feedbackComment}
+                    onChange={(e) => setFeedbackComment(e.target.value)}
+                    placeholder="Add a note (optional)"
+                  />
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -269,13 +323,24 @@ export default function ProblemDetail() {
             </div>
           </div>
         )}
-        {topTeam && (
+        {topTeam && !hasAcceptedTeam && (
           <div className="ai-strip-item" title="Top recommended student team">
             <span className="ai-strip-icon" aria-hidden="true"><IconGraduationCap size={19} /></span>
             <div>
               <div className="ai-strip-value">{topTeam.team_name}</div>
               <div className="ai-strip-label">
                 #1 team · score {(topTeam.score ?? 0).toFixed(2)}
+              </div>
+            </div>
+          </div>
+        )}
+        {acceptedTeam && (
+          <div className="ai-strip-item" title="Assigned team">
+            <span className="ai-strip-icon" aria-hidden="true"><IconGraduationCap size={19} /></span>
+            <div>
+              <div className="ai-strip-value">{acceptedTeam.team_name}</div>
+              <div className="ai-strip-label">
+                assigned team
               </div>
             </div>
           </div>

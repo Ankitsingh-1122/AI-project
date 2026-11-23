@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+﻿from fastapi import APIRouter, Depends
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -242,40 +242,113 @@ def _chart_category(problems: list[Problem], theme: str) -> bytes:
 
 
 def _chart_status(problems: list[Problem], theme: str) -> bytes:
-    """Donut of status shares — proportions of a small fixed set, rendered with
-    matplotlib's pie (seaborn has no pie); colors match the UI status badges."""
+    """Status distribution — rendered using seaborn barplot with status hues,
+    value labels, and percentage shares."""
     c = _apply_theme(theme)
     if not problems:
-        fig, ax = plt.subplots(figsize=(5.6, 4.6))
+        fig, ax = plt.subplots(figsize=(6.4, 4.2))
         ax.text(0.5, 0.5, "No problems yet", ha="center", va="center", fontsize=12, color=c["muted"])
         ax.axis("off")
         return _render_png(fig)
+
     colors = _status_palette(theme)
     counts = Counter((p.status or "open").replace("_", " ") for p in problems)
-    order = [s for s in ["open", "in review", "assigned", "resolved"] if s in counts]
-    values = [counts[k] for k in order]
-    total = sum(values) or 1
-    surface = "#131a29" if theme == "dark" else "#ffffff"
-    fig, ax = plt.subplots(figsize=(5.6, 4.6))
-    wedges, _ = ax.pie(
-        values,
-        colors=[colors[k.replace(" ", "_")] for k in order],
-        startangle=90,
-        counterclock=False,
-        wedgeprops=dict(width=0.42, edgecolor=surface, linewidth=2),
+    order = ["open", "in review", "assigned", "resolved"]
+    total = sum(counts.values()) or 1
+
+    df = pd.DataFrame([
+        {
+            "status": s.title(),
+            "count": counts.get(s, 0),
+            "pct": (counts.get(s, 0) / total) * 100,
+            "raw_status": s.replace(" ", "_"),
+        }
+        for s in order
+    ])
+
+    palette = [colors.get(r["raw_status"], "#4f46e5") for _, r in df.iterrows()]
+
+    fig, ax = plt.subplots(figsize=(6.8, 4.2))
+    sns.barplot(
+        data=df,
+        x="status",
+        y="count",
+        hue="status",
+        palette=palette,
+        legend=False,
+        ax=ax,
     )
-    for wedge, v in zip(wedges, values):
-        ang = (wedge.theta2 + wedge.theta1) / 2
-        x, y = 0.79 * np.cos(np.deg2rad(ang)), 0.79 * np.sin(np.deg2rad(ang))
-        ax.text(x, y, f"{v / total:.0%}", ha="center", va="center",
-                fontsize=10.5, fontweight="bold", color="white")
-    ax.set_title("Problems by status", fontsize=13, fontweight="bold", loc="left", pad=12)
-    ax.text(0, 0.10, f"{total:,}", ha="center", va="center", fontsize=28, fontweight="bold")
-    ax.text(0, -0.20, "total", ha="center", va="center", fontsize=10)
-    ax.legend(
-        wedges, [f"{k}  ({v:,})" for k, v in zip(order, values)],
-        loc="upper center", bbox_to_anchor=(0.5, -0.08), ncol=2, frameon=False,
+
+    ax.set_title(f"Problems by status (Total: {total:,})", fontsize=13, fontweight="bold", loc="left", pad=12)
+    ax.set_xlabel("")
+    ax.set_ylabel("Reports")
+    ax.yaxis.grid(True, alpha=0.55)
+    ax.set_axisbelow(True)
+    sns.despine(left=False)
+
+    muted = c["muted"]
+    for patch, (_, row) in zip(ax.patches, df.iterrows()):
+        h = patch.get_height()
+        ax.text(
+            patch.get_x() + patch.get_width() / 2,
+            h + max(df["count"]) * 0.03,
+            f"{int(h)} ({row['pct']:.0f}%)",
+            ha="center",
+            va="bottom",
+            fontsize=9.5,
+            fontweight="bold",
+            color=muted,
+        )
+
+    ax.set_ylim(0, max(df["count"]) * 1.18 + 1)
+    return _render_png(fig)
+
+
+def _chart_heatmap(problems: list[Problem], theme: str) -> bytes:
+    """Category vs Status cross-tabulation heatmap — rendered with seaborn heatmap,
+    annotated counts, and theme-adaptive gradient palette."""
+    c = _apply_theme(theme)
+    if not problems:
+        fig, ax = plt.subplots(figsize=(7.6, 4.4))
+        ax.text(0.5, 0.5, "No problems yet", ha="center", va="center", fontsize=12, color=c["muted"])
+        ax.axis("off")
+        return _render_png(fig)
+
+    data = [
+        {
+            "category": (p.category or "uncategorized").replace("_", " ").title(),
+            "status": (p.status or "open").replace("_", " ").title(),
+        }
+        for p in problems
+    ]
+    df = pd.DataFrame(data)
+    ct = pd.crosstab(df["category"], df["status"])
+
+    canonical_cols = ["Open", "In Review", "Assigned", "Resolved"]
+    cols = [col for col in canonical_cols if col in ct.columns] + [col for col in ct.columns if col not in canonical_cols]
+    ct = ct.reindex(columns=cols, fill_value=0)
+
+    fig, ax = plt.subplots(figsize=(7.8, max(3.8, 0.38 * len(ct) + 1.8)))
+    cmap = "mako" if theme == "dark" else "Blues"
+
+    sns.heatmap(
+        ct,
+        annot=True,
+        fmt="d",
+        cmap=cmap,
+        linewidths=1.0,
+        linecolor="#1e293b22" if theme == "light" else "#ffffff15",
+        cbar=True,
+        cbar_kws={"shrink": 0.8, "label": "Problems count"},
+        ax=ax,
     )
+
+    ax.set_title("Category × Status Matrix (Seaborn Heatmap)", fontsize=13, fontweight="bold", loc="left", pad=12)
+    ax.set_xlabel("Status")
+    ax.set_ylabel("")
+    ax.tick_params(axis="x", rotation=0)
+    ax.tick_params(axis="y", rotation=0)
+
     return _render_png(fig)
 
 
@@ -362,6 +435,7 @@ CHARTS = {
     "category": _chart_category,
     "status": _chart_status,
     "timeline": _chart_timeline,
+    "heatmap": _chart_heatmap,
 }
 
 

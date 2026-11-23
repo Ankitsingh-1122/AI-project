@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
+﻿import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { api } from '../api.js'
 import { Badge, DuplicateBadge, Empty, Select, statusLabel, statusTone } from '../components/ui.jsx'
-import { IconChevronRight, IconClipboard, IconClock, IconFlag, IconMapPin, IconPlus, IconTarget, IconX } from '../components/icons.jsx'
+import { IconChevronRight, IconClipboard, IconClock, IconFlag, IconMapPin, IconPlus, IconTarget, IconUsers, IconX } from '../components/icons.jsx'
 
 export default function CitizenDashboard() {
   const [problems, setProblems] = useState(null)
@@ -41,7 +41,7 @@ export default function CitizenDashboard() {
         (cat === 'all' || p.category === cat) &&
         (status === 'all' || p.status === status) &&
         (dup === 'all' || (dup === 'unique' ? !p.is_duplicate : !!p.is_duplicate)) &&
-        (!t || (p.title + ' ' + p.description + ' ' + p.location).toLowerCase().includes(t))
+        (!t || (p.title + ' ' + p.description + ' ' + p.location + ' ' + (p.assigned_team?.team_name || '')).toLowerCase().includes(t))
     )
   }, [problems, q, cat, status, dup])
 
@@ -165,12 +165,20 @@ export default function CitizenDashboard() {
               <h3>{p.title}</h3>
               <div className="card-badges">
                 <Badge tone={statusTone(p.status)}>{statusLabel(p.status)}</Badge>
+                {p.assigned_team && (
+                  <Badge tone="green">Team: {p.assigned_team.team_name}</Badge>
+                )}
                 <DuplicateBadge p={p} />
               </div>
             </div>
             <p className="card-text">{p.description.slice(0, 160)}{p.description.length > 160 ? '…' : ''}</p>
             <div className="card-meta">
               <span className="meta-item">Report #{p.id}</span>
+              {p.assigned_team && (
+                <span className="meta-item" style={{ color: 'var(--ok, #16a34a)', fontWeight: 600 }}>
+                  <IconUsers size={18} /> {p.assigned_team.team_name}
+                </span>
+              )}
               {p.location && <span className="meta-item"><IconMapPin size={18} /> {p.location}</span>}
               <span className="meta-item"><IconClock size={18} /> {new Date(p.created_at).toLocaleDateString()}</span>
             </div>

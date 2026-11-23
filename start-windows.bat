@@ -1,4 +1,4 @@
-@echo off
+﻿@echo off
 setlocal
 cd /d "%~dp0"
 
@@ -48,5 +48,5 @@ echo     - first start creates/seeds civic.db automatically
 echo     - close this window (or press Ctrl+C) to stop the app
 echo.
 cd backend
-python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 pause

@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+﻿import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { api } from '../api.js'
 import { useAuth } from '../auth.jsx'
-import { IconBell, IconBellOff, IconCheck, IconLink, IconLogout, IconMessage } from './icons.jsx'
+import { IconAlert, IconBell, IconBellOff, IconCheck, IconCpu, IconLink, IconLogout, IconMessage } from './icons.jsx'
 
 /*
  * Notification bell (top-right, after the light/dark toggle).
@@ -15,6 +15,10 @@ const TYPE_META = {
   message: { icon: IconMessage, label: 'Message' },
   team_deleted: { icon: IconLogout, label: 'Team update' },
   match_decision: { icon: IconLink, label: 'Decision' },
+  ai_auto_assignment: { icon: IconCpu, label: 'AI Auto-Assignment' },
+  problem_assigned: { icon: IconLink, label: 'Assignment' },
+  team_accepted: { icon: IconCheck, label: 'Team Accepted' },
+  team_rejected: { icon: IconAlert, label: 'Team Declined' },
 }
 
 function timeAgo(iso) {
