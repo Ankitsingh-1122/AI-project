@@ -13,3 +13,5 @@ sentence-transformers
 torch
 pytest
 httpx
+matplotlib
+seaborn
