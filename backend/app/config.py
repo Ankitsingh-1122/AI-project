@@ -1,3 +1,4 @@
+import os
 from pydantic_settings import BaseSettings
 
 
@@ -7,10 +8,10 @@ class Settings(BaseSettings):
     # DATABASE_URL=postgresql+psycopg2://user:pass@host/db
     DATABASE_URL: str = "sqlite:///./civic.db"
 
-    # Embedding model: "sentence" (sentence-transformers all-MiniLM-L6-v2,
-    # default) or "tfidf" (baseline). Falls back to tfidf automatically
-    # if the sentence model cannot be loaded (SRS 7.7 comparison).
-    EMBEDDER: str = "sentence"
+    # Embedding model: "sentence" (sentence-transformers all-MiniLM-L6-v2)
+    # or "tfidf" (baseline). Falls back to tfidf automatically.
+    # On low-RAM cloud hosts like Render free tier (512MB RAM), default to tfidf to prevent OOM.
+    EMBEDDER: str = "tfidf" if os.environ.get("RENDER") else "sentence"
 
     # Duplicate-detection threshold. seed.py tunes this experimentally
     # on the labelled evaluation set and persists it in model_state;
