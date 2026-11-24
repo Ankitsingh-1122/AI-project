@@ -6,12 +6,13 @@ import { useTheme } from '../theme.jsx'
 import { Badge, Empty, ErrorNote, Spinner, StatCard } from '../components/ui.jsx'
 import DataLabels from '../components/DataLabels.jsx'
 
-const CHART_KINDS = ['category', 'status', 'timeline', 'heatmap']
+const CHART_KINDS = ['category', 'status', 'timeline', 'heatmap', 'cluster_scatter']
 const CHART_TITLES = {
   category: 'Problems by category — Seaborn barplot (muted categorical palette)',
   status: 'Problems by status — Seaborn barplot (status hues & percentage shares)',
   timeline: 'Growth over time — Seaborn lineplot & density area',
-  heatmap: 'Category × Status cross-tabulation matrix — Seaborn heatmap'
+  heatmap: 'Category × Status cross-tabulation matrix — Seaborn heatmap',
+  cluster_scatter: 'AI Cluster Map — 2D PCA of problem embeddings (hue=cluster, style=category, palette=husl)'
 }
 
 export default function AdminDashboard() {
@@ -260,6 +261,8 @@ export default function AdminDashboard() {
                 <>
                   <div className="metric-row"><span>Model</span><b>{perf.trained_models.dedup_classifier.model || '—'}</b></div>
                   <div className="metric-row"><span>Decision threshold</span><b>{fmt(perf.trained_models.dedup_classifier.threshold)}</b></div>
+                  <div className="metric-row"><span>Test Precision (held-out)</span><b>{fmt(perf.trained_models.dedup_classifier.test_metrics?.precision)}</b></div>
+                  <div className="metric-row"><span>Test Recall (held-out)</span><b>{fmt(perf.trained_models.dedup_classifier.test_metrics?.recall)}</b></div>
                   <div className="metric-row"><span>Test F1 (held-out)</span><b>{fmt(perf.trained_models.dedup_classifier.test_metrics?.f1)}</b></div>
                   <div className="metric-row"><span>Test ROC-AUC (held-out)</span><b>{fmt(perf.trained_models.dedup_classifier.test_metrics?.roc_auc)}</b></div>
                 </>
@@ -269,7 +272,13 @@ export default function AdminDashboard() {
               <h4>Team-matching ranker</h4>
               <div className="metric-row"><span>Active</span><b>{perf.trained_models.team_ranker.active ? 'yes' : 'no (weighted formula)'}</b></div>
               {perf.trained_models.team_ranker.active && (
-                <div className="metric-row"><span>Model</span><b>{perf.trained_models.team_ranker.model || '—'}</b></div>
+                <>
+                  <div className="metric-row"><span>Model</span><b>{perf.trained_models.team_ranker.model || '—'}</b></div>
+                  <div className="metric-row"><span>Precision @ 3 (held-out)</span><b>{fmt(perf.trained_models.team_ranker.test_metrics?.precision_at?.['3'] ?? perf.trained_models.team_ranker.test_metrics?.precision_at?.[3])}</b></div>
+                  <div className="metric-row"><span>Precision @ 5 (held-out)</span><b>{fmt(perf.trained_models.team_ranker.test_metrics?.precision_at?.['5'] ?? perf.trained_models.team_ranker.test_metrics?.precision_at?.[5])}</b></div>
+                  <div className="metric-row"><span>Recall @ 3 (held-out)</span><b>{fmt(perf.trained_models.team_ranker.test_metrics?.recall_at?.['3'] ?? perf.trained_models.team_ranker.test_metrics?.recall_at?.[3])}</b></div>
+                  <div className="metric-row"><span>Test ROC-AUC</span><b>{fmt(perf.trained_models.team_ranker.val_auc || perf.trained_models.team_ranker.test_metrics?.auc)}</b></div>
+                </>
               )}
               <h4 style={{ marginTop: 16 }}>Clustering selection</h4>
               <div className="metric-row"><span>Method (measured ARI)</span><b>{perf.trained_models.clustering.selected || '—'}</b></div>

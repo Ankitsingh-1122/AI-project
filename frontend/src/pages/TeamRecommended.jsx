@@ -52,6 +52,16 @@ export default function TeamRecommended() {
     }
   }
 
+  async function markResolved(problemId) {
+    try {
+      await api(`/api/problems/${problemId}`, { method: 'PUT', body: { status: 'resolved' } })
+      toast.push('Problem marked as completed! Great job.')
+      await load()
+    } catch (err) {
+      if (err.status !== 401) toast.push(`Could not update problem: ${err.message}`, 'error')
+    }
+  }
+
   async function feedback(matchId, type) {
     try {
       await api('/api/feedback', { method: 'POST', body: { feedback_type: type, match_id: matchId } })
@@ -174,6 +184,26 @@ export default function TeamRecommended() {
                   <button className="btn btn-ghost" onClick={() => feedback(r.match_id, 'good_match')}><IconThumbsUp size={18} /> Good suggestion</button>
                   <button className="btn btn-ghost" onClick={() => feedback(r.match_id, 'bad_match')}><IconThumbsDown size={18} /> Poor suggestion</button>
                 </span>
+              </div>
+            )}
+            {r.match_status === 'accepted' && (
+              <div className="rec-actions" style={{ marginTop: 14, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                {r.status === 'resolved' ? (
+                  <span className="badge badge-green" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', fontSize: '0.9rem' }}>
+                    <IconCheck size={16} /> Completed / Solved
+                  </span>
+                ) : (
+                  <button
+                    className="btn btn-primary"
+                    style={{ background: '#16a34a', borderColor: '#16a34a' }}
+                    onClick={() => markResolved(r.problem_id)}
+                  >
+                    <IconCheck size={18} /> Mark as Completed
+                  </button>
+                )}
+                <Link to={`/problem/${r.problem_id}`} className="btn btn-outline">
+                  View Report Details
+                </Link>
               </div>
             )}
           </div>

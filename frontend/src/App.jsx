@@ -14,6 +14,7 @@ import TeamDashboard from './pages/TeamDashboard.jsx'
 import TeamRecommended from './pages/TeamRecommended.jsx'
 import AdminDashboard from './pages/AdminDashboard.jsx'
 import Profile from './pages/Profile.jsx'
+import CityMapPage from './pages/CityMapPage.jsx'
 
 function Protected({ roles, children }) {
   const { user, loading } = useAuth()
@@ -41,6 +42,7 @@ export default function App() {
         <Route path="/register" element={<Register />} />
         <Route element={<Layout />}>
           <Route path="/profile" element={<Protected><Profile /></Protected>} />
+          <Route path="/map" element={<Protected><CityMapPage /></Protected>} />
           <Route
             path="/dashboard"
             element={

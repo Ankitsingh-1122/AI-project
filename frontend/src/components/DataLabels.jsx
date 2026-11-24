@@ -179,13 +179,31 @@ export default function DataLabels({ refreshKey = 0 }) {
             </Badge>
           </div>
           {trainRes && (
-            <div className="muted small" style={{ marginTop: 10 }}>
-              {trainRes.error
-                ? <>Last training attempt failed: {trainRes.error}</>
-                : <>
-                    Last training: dedup {trainRes.dedup?.trained ? `trained in ${trainRes.dedup?.seconds}s` : trainRes.dedup?.reason || '—'}
-                    {' · '}ranker {trainRes.relevance?.trained ? `trained in ${trainRes.relevance?.seconds}s` : trainRes.relevance?.reason || '—'}
-                  </>}
+            <div style={{ marginTop: 10, padding: '10px 14px', borderRadius: 10,
+              background: (trainRes.error || (!trainRes.dedup?.trained && !trainRes.relevance?.trained)) ? '#fef2f2' : '#f0fdf4',
+              border: '1px solid', borderColor: (trainRes.error || (!trainRes.dedup?.trained && !trainRes.relevance?.trained)) ? '#fca5a5' : '#86efac'
+            }}>
+              {trainRes.error ? (
+                <span style={{ color: '#dc2626', fontWeight: 600, fontSize: 13 }}>
+                  Training failed: {trainRes.error}
+                </span>
+              ) : (
+                <>
+                  <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4 }}>Training result:</div>
+                  <div style={{ fontSize: 13 }}>
+                    Dedup model:{" "}
+                    {trainRes.dedup?.trained
+                      ? <span style={{ color: '#16a34a' }}>\u2713 Trained in {trainRes.dedup.seconds}s</span>
+                      : <span style={{ color: '#d97706' }}>{trainRes.dedup?.reason || 'Not trained'}</span>}
+                  </div>
+                  <div style={{ fontSize: 13, marginTop: 4 }}>
+                    Ranker:{" "}
+                    {trainRes.relevance?.trained
+                      ? <span style={{ color: '#16a34a' }}>\u2713 Trained in {trainRes.relevance.seconds}s</span>
+                      : <span style={{ color: '#d97706' }}>{trainRes.relevance?.reason || 'Not trained'}</span>}
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>

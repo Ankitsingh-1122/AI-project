@@ -1,4 +1,5 @@
-﻿import { useEffect, useMemo, useState } from 'react'
+import CityMap from '../components/CityMap.jsx'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { api } from '../api.js'
 import { Badge, DuplicateBadge, Empty, Select, statusLabel, statusTone } from '../components/ui.jsx'
@@ -10,6 +11,7 @@ export default function CitizenDashboard() {
   const [q, setQ] = useState('')
   const [cat, setCat] = useState('all')
   const [status, setStatus] = useState('all')
+  const [viewMode, setViewMode] = useState('list')
   const [searchParams, setSearchParams] = useSearchParams()
 
   // ?dup=unique / ?dup=duplicates deep links (used by the admin dashboard
@@ -73,9 +75,27 @@ export default function CitizenDashboard() {
           <h1>My Reports</h1>
           <p className="page-sub">Here are the problems you reported and what is happening with each one.</p>
         </div>
-        <Link to="/submit" className="btn btn-primary btn-lg">
-          <IconPlus size={20} aria-hidden="true" /> Report a Problem
-        </Link>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+          <div className="seg" role="group" aria-label="View mode">
+            <button
+              type="button"
+              className={'seg-btn' + (viewMode === 'list' ? ' active' : '')}
+              onClick={() => setViewMode('list')}
+            >
+              List View
+            </button>
+            <button
+              type="button"
+              className={'seg-btn' + (viewMode === 'map' ? ' active' : '')}
+              onClick={() => setViewMode('map')}
+            >
+              <IconMapPin size={15} /> Map View
+            </button>
+          </div>
+          <Link to="/submit" className="btn btn-primary btn-lg">
+            <IconPlus size={20} aria-hidden="true" /> Report a Problem
+          </Link>
+        </div>
       </div>
 
       <div className="mini-stats">

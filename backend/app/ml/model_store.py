@@ -80,11 +80,21 @@ def model_summary() -> dict:
     dedup = load_dedup_artifact()
     ranker = load_ranker_artifact()
     cluster = load_cluster_config()
+
+    ranker_metrics = None
+    ranker_metrics_path = ART_DIR / "ranker_metrics.json"
+    if ranker_metrics_path.exists():
+        try:
+            with open(ranker_metrics_path) as f:
+                ranker_metrics = json.load(f)
+        except Exception:
+            pass
+
     return {
         "dedup_classifier": {
             "active": bool(dedup),
             "model": dedup.get("model_name") if dedup else None,
-            "params": dedup.get("params") if dedup else None,
+            "params": {k: str(v) for k, v in (dedup.get("params") or {}).items() if not k.startswith("steps")} if dedup and isinstance(dedup.get("params"), dict) else None,
             "threshold": dedup.get("threshold") if dedup else None,
             "val_auc": dedup.get("val_auc") if dedup else None,
             "test_metrics": dedup.get("metrics") if dedup else None,
@@ -92,6 +102,8 @@ def model_summary() -> dict:
         "team_ranker": {
             "active": bool(ranker),
             "model": ranker.get("model_name") if ranker else None,
+            "val_auc": ranker_metrics.get("auc") if ranker_metrics else None,
+            "test_metrics": ranker_metrics,
         },
         "clustering": {
             "configured": bool(cluster),

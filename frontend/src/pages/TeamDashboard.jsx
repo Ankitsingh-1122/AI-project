@@ -5,7 +5,7 @@ import { useAuth } from '../auth.jsx'
 import { useToast } from '../toast.jsx'
 import TeamMessages from '../components/TeamMessages.jsx'
 import { ErrorNote } from '../components/ui.jsx'
-import { IconChevronRight, IconCpu, IconHeart, IconLogout, IconPlus, IconSliders, IconUsers, IconX } from '../components/icons.jsx'
+import { IconCheck, IconChevronRight, IconCpu, IconHeart, IconLogout, IconPlus, IconSliders, IconUsers, IconX } from '../components/icons.jsx'
 
 const emptyTeam = {
   team_name: '',
@@ -28,6 +28,7 @@ export default function TeamDashboard() {
   const [deletedNote, setDeletedNote] = useState(null)
   const [bannerHidden, setBannerHidden] = useState(false)
   const [assignedProblems, setAssignedProblems] = useState([])
+  const [inProgressProblems, setInProgressProblems] = useState([])
 
   useEffect(() => {
     load()
@@ -46,6 +47,10 @@ export default function TeamDashboard() {
           (r) => r.match_status === 'assigned' && r.status !== 'resolved'
         )
         setAssignedProblems(pending)
+        const active = (recs || []).filter(
+          (r) => r.match_status === 'accepted' && r.status !== 'resolved'
+        )
+        setInProgressProblems(active)
         setForm({
           team_name: t.team_name,
           description: t.description,
@@ -152,6 +157,49 @@ export default function TeamDashboard() {
             <Link to="/team/recommended" className="btn btn-primary">
               Review & Accept <IconChevronRight size={18} />
             </Link>
+          </div>
+        </div>
+      )}
+
+      {inProgressProblems.length > 0 && (
+        <div className="card" style={{ marginBottom: 20, borderLeft: '4px solid #16a34a' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8, color: '#16a34a' }}>
+              <IconCheck size={20} /> Active Projects ({inProgressProblems.length} In Progress)
+            </h3>
+            <Link to="/team/recommended" className="btn btn-ghost btn-sm">
+              View all <IconChevronRight size={16} />
+            </Link>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {inProgressProblems.map((pr) => (
+              <div key={pr.problem_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, padding: '10px 14px', background: 'var(--hover-bg, #f8fafc)', borderRadius: 8 }}>
+                <div>
+                  <Link to={`/problem/${pr.problem_id}`} style={{ fontWeight: 600 }}>#{pr.problem_id} · {pr.title}</Link>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--muted, #64748b)' }}>{pr.location || 'Location not specified'}</div>
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    className="btn btn-primary btn-sm"
+                    style={{ background: '#16a34a', borderColor: '#16a34a' }}
+                    onClick={async () => {
+                      try {
+                        await api(`/api/problems/${pr.problem_id}`, { method: 'PUT', body: { status: 'resolved' } })
+                        toast.push('Problem marked as completed!')
+                        load()
+                      } catch (e) {
+                        toast.push(`Error: ${e.message}`, 'error')
+                      }
+                    }}
+                  >
+                    <IconCheck size={16} /> Mark Completed
+                  </button>
+                  <Link to={`/problem/${pr.problem_id}`} className="btn btn-outline btn-sm">
+                    Details
+                  </Link>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}

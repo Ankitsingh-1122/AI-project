@@ -1,4 +1,4 @@
-﻿from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -352,6 +352,109 @@ def _chart_heatmap(problems: list[Problem], theme: str) -> bytes:
     return _render_png(fig)
 
 
+def _chart_cluster_scatter(problems: list[Problem], theme: str) -> bytes:
+    """2-D PCA scatter of live problem embeddings coloured by AI cluster label
+    (hue=cluster) and shaped by category (style=category).  Uses seaborn
+    scatterplot with the 'husl' palette so each cluster gets a vivid,
+    perceptually-uniform hue that is readable on both light and dark backgrounds.
+    """
+    c = _apply_theme(theme)
+    if not problems:
+        fig, ax = plt.subplots(figsize=(7.6, 5.0))
+        ax.text(0.5, 0.5, "No problems yet", ha="center", va="center", fontsize=12, color=c["muted"])
+        ax.axis("off")
+        return _render_png(fig)
+
+    from ..ml.embed import get_shared_embedder
+    from ..ml import preprocess
+    from sklearn.decomposition import PCA
+
+    embedder = get_shared_embedder()
+    semantic = getattr(embedder, "name", "tfidf") == "sentence"
+    texts = [preprocess.doc_text(p.title, p.description, semantic) for p in problems]
+    matrix = embedder.transform(texts)
+
+    # Densify if sparse (TF-IDF returns sparse matrix)
+    if hasattr(matrix, "toarray"):
+        matrix = matrix.toarray()
+    matrix = np.array(matrix, dtype=np.float32)
+
+    n_components = min(2, matrix.shape[0], matrix.shape[1])
+    if n_components < 2:
+        fig, ax = plt.subplots(figsize=(7.6, 5.0))
+        ax.text(0.5, 0.5, "Need at least 2 problems to plot", ha="center", va="center",
+                fontsize=12, color=c["muted"])
+        ax.axis("off")
+        return _render_png(fig)
+
+    pca = PCA(n_components=2, random_state=42)
+    coords = pca.fit_transform(matrix)
+
+    # Build cluster name lookup from DB (passed via problems list)
+    # We stored cluster_id on each Problem
+    cluster_names: dict[int, str] = {}
+    for p in problems:
+        cid = p.cluster_id
+        if cid is not None and cid not in cluster_names:
+            # Use a short label — will be loaded from DB if available
+            cluster_names[cid] = f"C{cid}"
+
+    def _cluster_label(p) -> str:
+        if p.cluster is not None and p.cluster.name:
+            # Shorten long cluster names: take first 2 words
+            parts = p.cluster.name.split()[:3]
+            return " ".join(parts)
+        if p.cluster_id is not None:
+            return f"Cluster {p.cluster_id}"
+        return "Unassigned"
+
+    df = pd.DataFrame({
+        "PC 1": coords[:, 0],
+        "PC 2": coords[:, 1],
+        "Cluster": [_cluster_label(p) for p in problems],
+        "Category": [(p.category or "other").replace("_", " ").title() for p in problems],
+    })
+
+    n_clusters = df["Cluster"].nunique()
+    palette = sns.color_palette("husl", n_clusters)
+
+    fig, ax = plt.subplots(figsize=(7.8, 5.4))
+    sns.scatterplot(
+        data=df,
+        x="PC 1",
+        y="PC 2",
+        hue="Cluster",
+        style="Category",
+        palette=palette,
+        s=110,
+        alpha=0.82,
+        edgecolor="white" if theme == "dark" else "#00000030",
+        linewidth=0.6,
+        ax=ax,
+    )
+
+    var_ratio = pca.explained_variance_ratio_
+    ax.set_title(
+        f"Problem clusters — 2D PCA projection ({var_ratio[0]:.0%} + {var_ratio[1]:.0%} variance)",
+        fontsize=12, fontweight="bold", loc="left", pad=12,
+    )
+    ax.set_xlabel(f"PC 1 ({var_ratio[0]:.1%})")
+    ax.set_ylabel(f"PC 2 ({var_ratio[1]:.1%})")
+    ax.xaxis.grid(True, alpha=0.35)
+    ax.yaxis.grid(True, alpha=0.35)
+    ax.set_axisbelow(True)
+    sns.despine()
+
+    leg = ax.get_legend()
+    if leg is not None:
+        leg.set_frame_on(False)
+        leg.set_title(None)
+        for text in leg.get_texts():
+            text.set_fontsize(8.5)
+
+    return _render_png(fig)
+
+
 def _chart_timeline(problems: list[Problem], theme: str) -> bytes:
     """Growth over time — two categorical series (cumulative vs duplicates),
     drawn with seaborn lineplot (hue=) over readable time buckets."""
@@ -436,6 +539,7 @@ CHARTS = {
     "status": _chart_status,
     "timeline": _chart_timeline,
     "heatmap": _chart_heatmap,
+    "cluster_scatter": _chart_cluster_scatter,
 }
 
 

@@ -3,7 +3,7 @@ import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-do
 import { useAuth } from '../auth.jsx'
 import NotificationBell from './NotificationBell.jsx'
 import TextSize from './TextSize.jsx'
-import { IconBack, IconChart, IconClipboard, IconEdit, IconHome, IconLogout, IconMenu, IconTarget, IconUser, IconUsers, IconX } from './icons.jsx'
+import { IconBack, IconChart, IconClipboard, IconEdit, IconHome, IconLogout, IconMapPin, IconMenu, IconTarget, IconUser, IconUsers, IconX } from './icons.jsx'
 
 function initials(name = '') {
   const parts = name.trim().split(/\s+/).filter(Boolean)
@@ -40,6 +40,7 @@ function navItemsFor(user) {
     items.push({ to: '/team', label: 'My Team', icon: IconHome, end: true })
     items.push({ to: '/team/recommended', label: 'Suggested Problems', icon: IconTarget })
   }
+  items.push({ to: '/map', label: 'City Map', icon: IconMapPin })
   items.push({ to: '/teams', label: 'All Teams', icon: IconUsers })
   items.push({ to: '/profile', label: 'My Account', icon: IconUser, end: true })
   return items

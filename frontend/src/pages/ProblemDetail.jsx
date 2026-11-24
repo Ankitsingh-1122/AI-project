@@ -72,6 +72,20 @@ export default function ProblemDetail() {
     }
   }
 
+  async function toggleUpvote() {
+    try {
+      const res = await api(`/api/problems/${id}/upvote`, { method: 'POST' })
+      setP((prev) => ({
+        ...prev,
+        upvotes: res.upvotes,
+        user_upvoted: res.upvoted,
+      }))
+      toast.push(res.upvoted ? "Thank you! Upvoted as 'I am affected too'." : "Upvote removed.")
+    } catch (err) {
+      if (err.status !== 401) toast.push(`Could not update upvote: ${err.message}`, 'error')
+    }
+  }
+
   async function changeStatus(status) {
     try {
       const data = await api(`/api/problems/${id}`, { method: 'PUT', body: { status } })
@@ -85,7 +99,14 @@ export default function ProblemDetail() {
   if (error && !p) return <ErrorNote>{error}</ErrorNote>
   if (!p) return <Spinner />
 
-  const canEdit = user && (user.role === 'admin' || user.role === 'citizen')
+  const isOwner = user && user.role === 'citizen' && p?.owner_id === user?.id
+  const isAdmin = user && user.role === 'admin'
+  const isAssignedTeam = user && user.role === 'team' && (
+    (p?.assigned_team && p?.assigned_team?.id === user?.team_id) ||
+    p?.recommended_teams?.some((t) => t.team_id === user?.team_id && (t.status === 'accepted' || t.status === 'assigned'))
+  )
+  const canChangeStatus = isAdmin || isOwner || isAssignedTeam
+  const canEdit = isAdmin || isOwner
   const nlp = analysis?.nlp
   const topSimilar = p.similar?.[0]
   const topTeam = p.recommended_teams?.[0]
@@ -120,6 +141,65 @@ export default function ProblemDetail() {
 
       <ErrorNote>{error}</ErrorNote>
 
+      {/* Visual Resolution Lifecycle Tracker */}
+      <div className="card timeline-card" style={{ marginBottom: 20, padding: '18px 24px' }}>
+        <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--muted, #64748b)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 14 }}>
+          Resolution Lifecycle Progress
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', position: 'relative', gap: 8 }}>
+          {/* Step 1: Reported */}
+          <div style={{ flex: 1, textAlign: 'center' }}>
+            <div style={{ width: 34, height: 34, borderRadius: '50%', background: '#16a34a', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 6px', fontWeight: 'bold' }}>✓</div>
+            <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>Reported</div>
+            <div style={{ fontSize: '0.72rem', color: 'var(--muted, #64748b)' }}>{p.created_at ? new Date(p.created_at).toLocaleDateString() : 'Logged'}</div>
+          </div>
+
+          <div style={{ height: 2, background: '#16a34a', flex: 0.5, marginTop: 17 }}></div>
+
+          {/* Step 2: AI Triaged */}
+          <div style={{ flex: 1, textAlign: 'center' }}>
+            <div style={{ width: 34, height: 34, borderRadius: '50%', background: '#16a34a', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 6px', fontWeight: 'bold' }}>✓</div>
+            <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>AI Triaged</div>
+            <div style={{ fontSize: '0.72rem', color: 'var(--muted, #64748b)' }}>{p.cluster || 'Analyzed'}</div>
+          </div>
+
+          <div style={{ height: 2, background: p.status === 'assigned' || p.status === 'in_review' || p.status === 'resolved' ? '#16a34a' : 'var(--card-border, #e2e8f0)', flex: 0.5, marginTop: 17 }}></div>
+
+          {/* Step 3: Team Assigned */}
+          <div style={{ flex: 1, textAlign: 'center' }}>
+            <div style={{
+              width: 34, height: 34, borderRadius: '50%',
+              background: p.status === 'assigned' || p.status === 'in_review' || p.status === 'resolved' ? '#16a34a' : '#f59e0b',
+              color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 6px', fontWeight: 'bold'
+            }}>
+              {p.status === 'assigned' || p.status === 'in_review' || p.status === 'resolved' ? '✓' : '3'}
+            </div>
+            <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>Team Assigned</div>
+            <div style={{ fontSize: '0.72rem', color: 'var(--muted, #64748b)' }}>
+              {p.assigned_team?.team_name || acceptedTeam?.team_name || 'Matching'}
+            </div>
+          </div>
+
+          <div style={{ height: 2, background: p.status === 'resolved' ? '#16a34a' : 'var(--card-border, #e2e8f0)', flex: 0.5, marginTop: 17 }}></div>
+
+          {/* Step 4: Resolved */}
+          <div style={{ flex: 1, textAlign: 'center' }}>
+            <div style={{
+              width: 34, height: 34, borderRadius: '50%',
+              background: p.status === 'resolved' ? '#16a34a' : 'var(--card-border, #e2e8f0)',
+              color: p.status === 'resolved' ? 'white' : 'var(--muted, #64748b)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 6px', fontWeight: 'bold'
+            }}>
+              {p.status === 'resolved' ? '✓' : '4'}
+            </div>
+            <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>Resolved</div>
+            <div style={{ fontSize: '0.72rem', color: 'var(--muted, #64748b)' }}>
+              {p.status === 'resolved' ? 'Completed' : 'Pending'}
+            </div>
+          </div>
+        </div>
+      </div>
+
       {p.is_duplicate && p.duplicate_of && (
         <div className="note note-warn">
           <IconAlert size={22} />
@@ -135,6 +215,37 @@ export default function ProblemDetail() {
                   <IconX size={18} /> No, it is different
                 </button>
               </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {isAssignedTeam && (
+        <div className={`card note ${p.status === 'resolved' ? 'note-success' : 'note-info'}`} style={{ marginBottom: 20 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 14 }}>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: '1.05rem', color: p.status === 'resolved' ? '#16a34a' : 'var(--blue, #2563eb)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <IconCheck size={20} />
+                {p.status === 'resolved' ? 'Problem Solved by Your Team' : 'Your Team is Handling This Problem'}
+              </div>
+              <p style={{ margin: '4px 0 0 0', color: 'var(--muted, #64748b)' }}>
+                {p.status === 'resolved'
+                  ? 'Great work! This problem has been marked as completed and resolved for the community.'
+                  : 'Have you completed the work on this issue? You can mark it as completed/solved now.'}
+              </p>
+            </div>
+            {p.status === 'resolved' ? (
+              <button className="btn btn-outline btn-sm" onClick={() => changeStatus('assigned')}>
+                Reopen / Mark In Progress
+              </button>
+            ) : (
+              <button
+                className="btn btn-primary"
+                style={{ background: '#16a34a', borderColor: '#16a34a' }}
+                onClick={() => changeStatus('resolved')}
+              >
+                <IconCheck size={18} /> Mark as Completed
+              </button>
             )}
           </div>
         </div>
@@ -156,7 +267,7 @@ export default function ProblemDetail() {
               <LocationButton location={p.location} />
             </div>
           )}
-          {canEdit && (
+          {canChangeStatus && (
             <div className="filter-inline">
               <label className="fl-block">
                 <span>Change status</span>

@@ -186,7 +186,7 @@ def main() -> None:
 
     pval = model.predict_proba(Xval)[:, 1]
     pte = model.predict_proba(Xte)[:, 1]
-    thr = _threshold(pval, yval)
+    thr = _threshold(yval, pval)
     pred = (pte >= thr).astype(int)
     cm = confusion_matrix(yte, pred, labels=[0, 1]).ravel()
 

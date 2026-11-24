@@ -24,13 +24,13 @@ def user_out(u: User) -> dict:
 
 @router.post("/register", status_code=201)
 def register(body: RegisterIn, db: Session = Depends(get_db)):
-    if db.scalars(select(User).where(User.email == body.email)).first():
+    clean_email = body.email.strip().lower()
+    clean_name = body.name.strip()
+    if db.scalars(select(User).where(User.email == clean_email)).first():
         raise HTTPException(409, "Email already registered")
-    if db.scalars(select(User).where(User.name == body.name)).first():
-        raise HTTPException(409, "Name already used")
     user = User(
-        name=body.name,
-        email=body.email,
+        name=clean_name,
+        email=clean_email,
         hashed_password=hash_password(body.password),
         role=body.role,
     )
@@ -43,7 +43,8 @@ def register(body: RegisterIn, db: Session = Depends(get_db)):
 
 @router.post("/login")
 def login(body: LoginIn, db: Session = Depends(get_db)):
-    user = db.scalars(select(User).where(User.email == body.email)).first()
+    clean_email = body.email.strip().lower()
+    user = db.scalars(select(User).where(User.email == clean_email)).first()
     if not user or not verify_password(body.password, user.hashed_password):
         raise HTTPException(401, "Invalid email or password")
     token, _ = create_access_token(user.id, user.role)
