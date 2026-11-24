@@ -19,7 +19,7 @@ python -m pip install --upgrade pip
 pip install torch --index-url https://download.pytorch.org/whl/cpu
 
 # 3. Install backend Python dependencies
-echo "===> Step 3: Installing backend requirements..."
-pip install -r backend/requirements.txt
+echo "===> Step 3: Installing dependencies..."
+pip install -r requirements.txt
 
 echo "===> Build completed successfully!"
